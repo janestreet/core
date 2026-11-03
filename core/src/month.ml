@@ -25,7 +25,7 @@ module Stable = struct
       , sexp ~stackify
       , sexp_grammar
       , typerep
-      , variants]
+      , variants ~fold]
 
     let failwithf = Printf.failwithf
 

@@ -21,11 +21,12 @@ include struct
 
   let __bin_read_t__ bin_read_el buf ~pos_ref _n = make (bin_read_el buf ~pos_ref)
 
-  let bin_writer_t : _ Type_class.S1.writer =
+  let%template bin_writer_t : (_ Type_class.S1.writer[@mode m]) =
     fun bin_writer ->
-    { size = (fun v -> bin_size_t bin_writer.size v)
-    ; write = (fun buf ~pos v -> bin_write_t bin_writer.write buf ~pos v)
+    { size = (fun v -> (bin_size_t [@mode m]) bin_writer.size v)
+    ; write = (fun buf ~pos v -> (bin_write_t [@mode m]) bin_writer.write buf ~pos v)
     }
+  [@@mode m = (global, local)]
   ;;
 
   let bin_reader_t : _ Type_class.S1.reader =

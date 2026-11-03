@@ -26,16 +26,19 @@ module Stable = struct
     include T
 
     module Format = struct
-      type 'a t = 'a list [@@deriving bin_io, sexp ~stackify, stable_witness]
+      type 'a t = 'a list [@@deriving bin_io ~localize, sexp ~stackify, stable_witness]
     end
 
     include%template
-      Binable.Of_binable1.V2 [@modality portable]
+      Binable.Of_binable1.V2 [@mode local] [@modality portable]
         (Format)
         (struct
           include T
 
-          let to_binable = Base.Nonempty_list.to_list
+          let%template[@mode m = (global, local)] to_binable =
+            (Base.Nonempty_list.to_list [@mode m])
+          ;;
+
           let of_binable = Base.Nonempty_list.of_list_exn
 
           let caller_identity =
@@ -202,12 +205,19 @@ let flag arg_type =
     ~f:(fun (one, more) -> one :: more)
 ;;
 
-let comma_separated_argtype ?key ?strip_whitespace ?unique_values arg_type =
+let comma_separated_argtype
+  ?key
+  ?strip_whitespace
+  ?unique_values
+  ?propagate_additional_documentation
+  arg_type
+  =
   arg_type
   |> Command.Param.Arg_type.comma_separated
        ~allow_empty:false
        ?strip_whitespace
        ?unique_values
+       ?propagate_additional_documentation
   |> Command.Param.Arg_type.map ?key ~f:of_list_exn
 ;;
 

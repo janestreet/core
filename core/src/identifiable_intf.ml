@@ -54,7 +54,9 @@ module type%template Identifiable = sig @@ portable
   [@@@alloc.default a = (heap, stack)]
 
   module%template.portable
-    [@modality p] Make_plain (M : sig
+    [@modality p]
+    (Make_plain
+    @@ nonportable) (M : sig
       type t [@@deriving (compare [@mode.explicit m]), hash, sexp_of]
 
       include Stringable.S [@alloc a] with type t := t
@@ -85,7 +87,9 @@ module type%template Identifiable = sig @@ portable
         end
       ]} *)
   module%template.portable
-    [@modality p] Make (M : sig
+    [@modality p]
+    (Make
+    @@ nonportable) (M : sig
       type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), hash, sexp]
 
       include Stringable.S [@alloc a] with type t := t
@@ -95,7 +99,9 @@ module type%template Identifiable = sig @@ portable
     end) : S [@modality p] [@mode m] [@alloc a] with type t := M.t
 
   module%template.portable
-    [@modality p] Make_with_sexp_grammar (M : sig
+    [@modality p]
+    (Make_with_sexp_grammar
+    @@ nonportable) (M : sig
       type t
       [@@deriving
         (bin_io [@mode m]), (compare [@mode.explicit m]), hash, sexp, sexp_grammar]
@@ -107,7 +113,9 @@ module type%template Identifiable = sig @@ portable
     end) : S_sexp_grammar [@modality p] [@mode m] [@alloc a] with type t := M.t
 
   module%template.portable
-    [@modality p] Make_and_derive_hash_fold_t (M : sig
+    [@modality p]
+    (Make_and_derive_hash_fold_t
+    @@ nonportable) (M : sig
       type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
 
       include Stringable.S [@alloc a] with type t := t
@@ -119,7 +127,9 @@ module type%template Identifiable = sig @@ portable
     end) : S [@modality p] [@mode m] [@alloc a] with type t := M.t
 
   module%template.portable
-    [@modality p] Make_using_comparator (M : sig
+    [@modality p]
+    (Make_using_comparator
+    @@ nonportable) (M : sig
       type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), hash, sexp]
 
       include Comparator.S [@modality p] with type t := t
@@ -133,7 +143,9 @@ module type%template Identifiable = sig @@ portable
     with type comparator_witness := M.comparator_witness
 
   module%template.portable
-    [@modality p] Make_plain_using_comparator (M : sig
+    [@modality p]
+    (Make_plain_using_comparator
+    @@ nonportable) (M : sig
       type t [@@deriving (compare [@mode.explicit m]), hash, sexp_of]
 
       include Comparator.S [@modality p] with type t := t
@@ -148,7 +160,9 @@ module type%template Identifiable = sig @@ portable
     with type comparator_witness := M.comparator_witness
 
   module%template.portable
-    [@modality p] Make_using_comparator_and_derive_hash_fold_t (M : sig
+    [@modality p]
+    (Make_using_comparator_and_derive_hash_fold_t
+    @@ nonportable) (M : sig
       type t [@@deriving (bin_io [@mode m]), (compare [@mode.explicit m]), sexp]
 
       include Comparator.S [@modality p] with type t := t
@@ -163,7 +177,8 @@ module type%template Identifiable = sig @@ portable
     with type comparator_witness := M.comparator_witness
 
   module%template.portable
-    [@modality p] Extend
+    [@modality p]
+    Extend
       (M : Base.Identifiable.S
     [@mode m] [@modality p] [@alloc a])
       (B : Binable0.S [@mode m] with type t = M.t) :

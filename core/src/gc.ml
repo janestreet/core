@@ -264,10 +264,7 @@ let disable_compaction ?logger ~allocation_policy () =
     | `Don't_change -> None
     | `Set_to policy -> Some policy
   in
-  (* The value 1_000_000, according to
-     http://caml.inria.fr/pub/docs/manual-ocaml-4.02/libref/Gc.html will disable
-     compactions.
-  *)
+  (* Automatic compaction is disabled if [max_overhead >= 1_000_000]. *)
   tune ?logger ?allocation_policy ~max_overhead:1_000_000 ()
 ;;
 
@@ -305,8 +302,11 @@ let compact_if_not_running_test () = if not am_running_test then compact ()
 
 (* The compiler won't optimize int_of_string away so it won't perform constant folding
    below. *)
-let%template rec keep_alive o =
-  if zero <> 0 then keep_alive ((Sys.opaque_identity [@mode contended]) o)
+let%template keep_alive =
+  let rec keep_alive o =
+    if zero <> 0 then keep_alive ((Sys.opaque_identity [@mode contended]) o)
+  in
+  keep_alive
 ;;
 
 module For_testing = struct
@@ -377,7 +377,7 @@ module For_testing = struct
         #(x, Allocation_report.create ~major_words_allocated ~minor_words_allocated))
   ;;
 
-  let measure_allocation_for_runtime5_local f = exclave_
+  let measure_allocation_without_memprof_local f = exclave_
     let minor_words_before = minor_words () in
     let promoted_words_before = promoted_words () in
     let major_words_before = major_words () in
@@ -459,7 +459,7 @@ module For_testing = struct
     | exception Failure msg ->
       if String.equal msg "Gc.Memprof.start: not implemented in multicore"
       then (
-        let #(a, b) = (measure_allocation_for_runtime5_local [@kind k]) f in
+        let #(a, b) = (measure_allocation_without_memprof_local [@kind k]) f in
         #(a, b, []))
       else (
         match failwith msg with

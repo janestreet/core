@@ -25,10 +25,11 @@ module%template.portable [@modality p] Comparisons_with_zero_alloc =
   [@mode m]
 
 module%template.portable
-  [@modality p] Validate (T : sig
+  [@modality p]
+  Validate (T : sig
     type t [@@deriving (compare [@mode.explicit m]), sexp_of]
   end) : Validate [@modality p] with type t := T.t = struct
-  module V = Validate
+  module V : module type of Validate with type t = Validate.t = Validate
   open Maybe_bound
 
   let to_string t = Base.Sexp.to_string (T.sexp_of_t t)
@@ -82,7 +83,8 @@ end
 [@@modality (p, c) = ((nonportable, uncontended), (portable, contended))]
 
 module%template.portable
-  [@modality p] Map_and_set_binable_using_comparator (T : sig
+  [@modality p]
+  Map_and_set_binable_using_comparator (T : sig
     type t [@@deriving bin_io, (compare [@mode.explicit m]), sexp]
 
     include Comparator.S [@modality p] with type t := t
@@ -94,7 +96,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Map_and_set_binable (T : sig
+  [@modality p]
+  Map_and_set_binable (T : sig
     type t [@@deriving bin_io, (compare [@mode.explicit m]), sexp]
   end) =
 Map_and_set_binable_using_comparator [@mode m] [@modality p] (struct
@@ -103,7 +106,8 @@ Map_and_set_binable_using_comparator [@mode m] [@modality p] (struct
   end)
 
 module%template.portable
-  [@modality p] Poly (T : sig
+  [@modality p]
+  Poly (T : sig
     type t [@@deriving sexp]
   end) =
 struct
@@ -125,7 +129,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_plain_using_comparator (T : sig
+  [@modality p]
+  Make_plain_using_comparator (T : sig
     type t [@@deriving sexp_of]
 
     include Using_comparator_arg [@modality p] [@mode m] with type t := t
@@ -153,7 +158,8 @@ module%template.portable
 end
 
 module%template.portable
-  [@modality p] Make_plain (T : sig
+  [@modality p]
+  Make_plain (T : sig
     type t [@@deriving (compare [@mode.explicit m]), sexp_of]
   end) =
 Make_plain_using_comparator [@modality p] [@mode m] (struct
@@ -162,7 +168,8 @@ Make_plain_using_comparator [@modality p] [@mode m] (struct
   end)
 
 module%template.portable
-  [@modality p] Make_using_comparator (T : sig
+  [@modality p]
+  Make_using_comparator (T : sig
     type t [@@deriving sexp]
 
     include Using_comparator_arg [@modality p] [@mode m] with type t := t
@@ -190,7 +197,8 @@ module%template.portable
 end
 
 module%template.portable
-  [@modality p] Make (T : sig
+  [@modality p]
+  Make (T : sig
     type t [@@deriving (compare [@mode.explicit m]), sexp]
   end) : S [@modality p] [@mode m] with type t := T.t =
 Make_using_comparator [@modality p] [@mode m] (struct
@@ -199,7 +207,8 @@ Make_using_comparator [@modality p] [@mode m] (struct
   end)
 
 module%template.portable
-  [@modality p] Make_binable_using_comparator (T : sig
+  [@modality p]
+  Make_binable_using_comparator (T : sig
     type t [@@deriving bin_io, sexp]
 
     include Using_comparator_arg [@modality p] [@mode m] with type t := t
@@ -226,7 +235,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_binable (T : sig
+  [@modality p]
+  Make_binable (T : sig
     type t [@@deriving bin_io, (compare [@mode.explicit m]), sexp]
   end) =
 struct
@@ -237,7 +247,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Extend_plain
+  [@modality p]
+  Extend_plain
     (M : Base.Comparable.S
   [@modality p] [@mode m])
     (X : sig
@@ -269,7 +280,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Extend
+  [@modality p]
+  Extend
     (M : Base.Comparable.S
   [@modality p] [@mode m])
     (X : sig
@@ -301,7 +313,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Extend_binable
+  [@modality p]
+  Extend_binable
     (M : Base.Comparable.S
   [@modality p] [@mode m])
     (X : sig
@@ -333,7 +346,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Inherit
+  [@modality p]
+  Inherit
     (C : sig
        type t [@@deriving compare [@mode.explicit m]]
      end)
@@ -398,7 +412,8 @@ module Stable = struct
       end
 
       module%template.portable
-        [@modality p] Make
+        [@modality p]
+        Make
           (X : Stable_module_types.With_stable_witness.S0
         [@modality p]) =
       struct

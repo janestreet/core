@@ -119,10 +119,20 @@ struct
   (* [deriving hash] is missing for [array], [bytes], and [ref] since these types are
      mutable. *)
   type ('a : value_or_null mod separable) array = 'a Array.t
-  [@@deriving compare ~localize, equal ~localize, globalize, sexp ~stackify, sexp_grammar]
+  [@@deriving
+    compare ~localize
+    , equal ~localize
+    , globalize
+    , sexp ~stackify
+    , bin_io ~localize
+    , sexp_grammar]
 
-  [%%rederive.portable
-    type nonrec 'a array = 'a Array.t [@@deriving bin_io ~localize, typerep]]
+  [%%rederive.portable type nonrec 'a array = 'a Array.t [@@deriving typerep]]
+
+  type%template ('a : k mod separable) array = ('a Array.t[@kind k])
+  [@@deriving
+    bin_io ~localize, compare ~localize, equal ~localize, globalize, sexp ~stackify]
+  [@@kind k = (base_non_value, value_or_null mod external64)]
 
   type nonrec floatarray = floatarray [@@deriving globalize, sexp ~stackify, sexp_grammar]
 
@@ -160,11 +170,20 @@ struct
     , typerep]
 
   type ('a : value_or_null mod separable) iarray = 'a Iarray.t
-  [@@deriving compare ~localize, equal ~localize, sexp ~stackify, sexp_grammar]
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , sexp ~stackify
+    , sexp_grammar]
 
-  [%%rederive.portable
-    type nonrec 'a iarray = 'a Iarray.t
-    [@@deriving bin_io ~localize, hash, globalize, typerep]]
+  [%%rederive.portable type nonrec 'a iarray = 'a Iarray.t [@@deriving hash, typerep]]
+
+  type%template ('a : k mod separable) iarray = ('a Iarray.t[@kind k])
+  [@@deriving
+    bin_io ~localize, compare ~localize, equal ~localize, globalize, sexp ~stackify]
+  [@@kind k = (base_non_value, value_or_null mod external64)]
 
   type int = Int.t
   [@@deriving
@@ -184,7 +203,7 @@ struct
     , hash
     , equal ~localize
     , globalize
-    , sexp ~stackify ~unboxed
+    , sexp ~stackify
     , sexp_grammar
     , typerep]
 
@@ -195,7 +214,7 @@ struct
     , hash
     , equal ~localize
     , globalize
-    , sexp ~stackify ~unboxed
+    , sexp ~stackify
     , sexp_grammar
     , typerep]
 
@@ -222,7 +241,7 @@ struct
     , equal ~localize
     , globalize
     , hash
-    , sexp ~stackify ~unboxed
+    , sexp ~stackify
     , sexp_grammar
     , typerep]
 
@@ -314,9 +333,20 @@ end :
 sig
 @@ portable
   type ('a : value_or_null mod separable) array
-  [@@deriving compare ~localize, equal ~localize, globalize, sexp ~stackify, sexp_grammar]
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , sexp ~stackify
+    , sexp_grammar]
 
-  [%%rederive: type nonrec 'a array = 'a Array.t [@@deriving bin_io ~localize, typerep]]
+  [%%rederive: type nonrec 'a array = 'a Array.t [@@deriving typerep]]
+
+  type%template ('a : k mod separable) array = ('a Array.t[@kind k])
+  [@@deriving
+    bin_io ~localize, compare ~localize, equal ~localize, globalize, sexp ~stackify]
+  [@@kind k = (base_non_value, value_or_null mod external64)]
 
   type nonrec floatarray = floatarray [@@deriving sexp ~stackify, globalize, sexp_grammar]
 
@@ -354,11 +384,20 @@ sig
     , typerep]
 
   type ('a : value_or_null mod separable) iarray = 'a Iarray.t
-  [@@deriving compare ~localize, equal ~localize, sexp ~stackify, sexp_grammar]
+  [@@deriving
+    bin_io ~localize
+    , compare ~localize
+    , equal ~localize
+    , globalize
+    , sexp ~stackify
+    , sexp_grammar]
 
-  [%%rederive:
-    type nonrec 'a iarray = 'a iarray
-    [@@deriving bin_io ~localize, hash, globalize, typerep]]
+  [%%rederive: type nonrec 'a iarray = 'a iarray [@@deriving hash, typerep]]
+
+  type%template ('a : k mod separable) iarray = ('a Iarray.t[@kind k])
+  [@@deriving
+    bin_io ~localize, compare ~localize, equal ~localize, globalize, sexp ~stackify]
+  [@@kind k = (base_non_value, value_or_null mod external64)]
 
   type int
   [@@deriving
@@ -378,7 +417,7 @@ sig
     , equal ~localize
     , globalize
     , hash
-    , sexp ~stackify ~unboxed
+    , sexp ~stackify
     , sexp_grammar
     , typerep]
 
@@ -389,7 +428,7 @@ sig
     , equal ~localize
     , globalize
     , hash
-    , sexp ~stackify ~unboxed
+    , sexp ~stackify
     , sexp_grammar
     , typerep]
 
@@ -416,7 +455,7 @@ sig
     , equal ~localize
     , globalize
     , hash
-    , sexp ~stackify ~unboxed
+    , sexp ~stackify
     , sexp_grammar
     , typerep]
 
@@ -506,10 +545,18 @@ sig
 end
 [@with:
   type ('a : value_or_null mod separable) array := 'a array
+
+  type ('a : k mod separable) array = ('a array[@kind k])
+  [@@kind k = (base_non_value, value_or_null mod external64)]
+
   type bool := bool
   type char := char
   type float := float
   type ('a : value_or_null mod separable) iarray := 'a iarray
+
+  type ('a : k mod separable) iarray = ('a iarray[@kind k])
+  [@@kind k = (base_non_value, value_or_null mod external64)]
+
   type int := int
   type int32 := int32
   type int64 := int64

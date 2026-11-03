@@ -10,18 +10,10 @@ module type Extend_zone = sig @@ portable
 
   include Diffable.S_atomic with type t := t
 
-  (** [find name] looks up a [t] by its name and returns it. This also accepts some
-      aliases, including:
-
-      - chi -> America/Chicago
-      - nyc -> America/New_York
-      - hkg -> Asia/Hong_Kong
-      - ldn -> Europe/London
-      - lon -> Europe/London
-      - tyo -> Asia/Tokyo
-      - syd -> Australia/Sydney *)
+  (** [find name] looks up a [t] by its name and returns it. *)
   val find : string -> t option
 
+  (** Like [find]; raises if the name is not found. *)
   val find_exn : string -> t
 
   (** [local] is the machine's local timezone, as determined from the [TZ] environment

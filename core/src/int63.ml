@@ -20,21 +20,9 @@ end = struct
               (Base.Int63.Private.Emul.W.wrap_exn i) [@nontail]
           ;;
 
-          external unbox_int64
-            :  int64 @ local
-            -> (int64#[@unboxed])
-            @@ portable
-            = "%unbox_int64"
-
-          external box_int64
-            :  (int64#[@unboxed])
-            -> (int64[@local_opt])
-            @@ portable
-            = "%box_int64"
-
           let[@mode m = (global, local)] to_binable t =
-            let i = unbox_int64 (Base.Int63.Private.Emul.W.unwrap t) in
-            box_int64 i [@exclave_if_local m]
+            let i = Basement.Int64_u.unbox (Base.Int63.Private.Emul.W.unwrap t) in
+            Basement.Int64_u.box i [@exclave_if_local m]
           ;;
         end)
   end
@@ -45,7 +33,7 @@ end = struct
 
   type 'a binable = (module S with type t = 'a)
 
-  let binable_of_repr : type a b. (a, b) Base.Int63.Private.Repr.t -> b binable = function
+  let binable_of_repr : type a. a Base.Int63.Private.Repr.t -> a binable = function
     | Base.Int63.Private.Repr.Int -> (module Int)
     | Base.Int63.Private.Repr.Int64 -> (module Bin_emulated)
   ;;

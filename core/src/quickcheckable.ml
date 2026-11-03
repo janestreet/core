@@ -3,7 +3,8 @@ include Quickcheck_intf.Definitions
 include Quickcheckable_intf.Definitions
 
 module%template.portable
-  [@modality p] Of_quickcheckable
+  [@modality p]
+  Of_quickcheckable
     (Quickcheckable : S)
     (Conv : Conv with type quickcheckable := Quickcheckable.t) : S with type t := Conv.t =
 struct
@@ -52,7 +53,8 @@ module Of_quickcheckable1
 end
 
 module%template
-  [@modality portable] Of_quickcheckable1
+  [@modality portable]
+  Of_quickcheckable1
     (Quickcheckable : S1
   [@modality portable])
     (Conv : sig
@@ -82,7 +84,8 @@ module%template
 end
 
 module%template.portable
-  [@modality p] Of_quickcheckable_filtered
+  [@modality p]
+  Of_quickcheckable_filtered
     (Quickcheckable : S)
     (Conv : Conv_filtered with type quickcheckable := Quickcheckable.t) :
   S with type t := Conv.t = struct
@@ -131,7 +134,8 @@ module Of_quickcheckable_filtered1
 end
 
 module%template
-  [@modality portable] Of_quickcheckable_filtered1
+  [@modality portable]
+  Of_quickcheckable_filtered1
     (Quickcheckable : S1
   [@modality portable])
     (Conv : sig

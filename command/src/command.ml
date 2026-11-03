@@ -46,6 +46,29 @@ exception Failed_to_parse_command_line of string
 let die fmt = ksprintf (fun msg () -> raise (Failed_to_parse_command_line msg)) fmt
 let help_screen_compare = Shape.Private.help_screen_compare
 
+module Help_category = struct
+  include Shape.Help_category
+
+  let default_abbrev name =
+    String.map name ~f:(fun char ->
+      if Char.is_alphanum char then Char.lowercase char else '-')
+    |> String.split ~on:'-'
+    |> List.filter ~f:(Fn.non String.is_empty)
+    |> String.concat ~sep:"-"
+  ;;
+
+  let create ?abbrev name =
+    let abbrev =
+      match abbrev with
+      | Some abbrev -> abbrev
+      | None -> default_abbrev name
+    in
+    if String.is_empty abbrev
+    then raise_s [%message "Command.Help_category.create: [abbrev] must not be empty"];
+    { abbrev; name }
+  ;;
+end
+
 (*=universal maps are used to pass around values between different bits
    of command line parsing code without having a huge impact on the
    types involved
@@ -407,6 +430,7 @@ end = struct
     ?key
     ?(strip_whitespace = false)
     ?(unique_values = false)
+    ?(propagate_additional_documentation = false)
     t
     =
     let strip = if strip_whitespace then fun str -> String.strip str else Fn.id in
@@ -454,7 +478,14 @@ end = struct
         else failwith "Command.Spec.Arg_type.comma_separated: empty list not allowed"
       else List.map (String.split string ~on:',') ~f:(fun str -> t.parse (strip str))
     in
-    (create [@mode p]) ?key ?complete of_string
+    (create' [@mode p])
+      ?key
+      ?complete
+      of_string
+      ~additional_documentation:
+        (if propagate_additional_documentation
+         then additional_documentation t
+         else Lazy.from_val None)
   ;;
 
   let auto_complete t =
@@ -501,6 +532,7 @@ module Flag = struct
   type action =
     | No_arg of (Env.t -> Env.t)
     | Print_info_and_quit of (Env.t -> string)
+    | Print_info_and_quit_with_arg of (Env.t -> string -> string) * Completer.t
     | Arg of (Env.t -> string -> Env.t) * Completer.t
     | Rest of (Env.t -> string list -> Env.t) * Completer.For_escape.t
 
@@ -514,6 +546,7 @@ module Flag = struct
              --version. *)
       ; action : action
       ; doc : string
+      ; help_category : Shape.Help_category.t option
       ; num_occurrences : Num_occurrences.t
       ; check_available : Env.t -> unit
       ; name_matching : [ `Prefix | `Full_match_required ]
@@ -533,9 +566,11 @@ module Flag = struct
         let arg_doc, doc =
           match (action : action), String.lsplit2 doc ~on:' ' with
           | (No_arg _ | Print_info_and_quit _), _ -> None, doc
-          | Arg _, (None | Some ("", _)) -> Some "_", doc
+          | (Arg _ | Print_info_and_quit_with_arg _), (None | Some ("", _)) ->
+            Some "_", doc
           | Rest _, (None | Some ("", _)) -> None, doc
-          | (Arg _ | Rest _), Some (arg, doc) -> Some arg, doc
+          | (Arg _ | Print_info_and_quit_with_arg _ | Rest _), Some (arg, doc) ->
+            Some arg, doc
         in
         { doc = String.strip doc; arg_doc }
       ;;
@@ -558,6 +593,7 @@ module Flag = struct
          ; doc
          ; aliases
          ; action
+         ; help_category = _
          ; num_occurrences = _
          ; check_available = _
          ; name_matching = _
@@ -582,6 +618,7 @@ module Flag = struct
        ; doc
        ; aliases
        ; action
+       ; help_category
        ; num_occurrences = _
        ; check_available = _
        ; name_matching = _
@@ -591,7 +628,7 @@ module Flag = struct
       =
       let { Doc.arg_doc; doc } = Doc.parse ~action ~doc in
       let name = wrap_if_optional t (Doc.concat ~name ~arg_doc) in
-      { name; doc; aliases }
+      { name; doc; aliases; help_category }
     ;;
 
     let%template create flags =
@@ -616,24 +653,23 @@ module Flag = struct
 
   type 'a t = string -> 'a state
 
+  let parse_arg name arg_type arg =
+    match Arg_type.parse arg_type arg with
+    | Error error ->
+      die "failed to parse %s value %S.\n%s" name arg (Error.to_string_hum error) ()
+    | Ok arg -> arg
+  ;;
+
   let arg_flag name arg_type read write num_occurrences =
     { read
     ; num_occurrences
     ; action =
         (let update env arg =
-           match Arg_type.parse arg_type arg with
-           | Error error ->
-             die
-               "failed to parse %s value %S.\n%s"
-               name
-               arg
-               (Error.to_string_hum error)
-               ()
-           | Ok arg ->
-             let env = write env arg in
-             (match Arg_type.key arg_type with
-              | None -> env
-              | Some key -> Env.multi_add env ~key ~data:arg)
+           let arg = parse_arg name arg_type arg in
+           let env = write env arg in
+           match Arg_type.key arg_type with
+           | None -> env
+           | Some key -> Env.multi_add env ~key ~data:arg
          in
          Arg (update, Arg_type.complete arg_type))
     ; additional_documentation = Arg_type.additional_documentation arg_type
@@ -1390,6 +1426,7 @@ let%template lookup_expand_with_aliases map prefix key_type =
           ; aliases_excluded_from_help
           ; action = _
           ; doc = _
+          ; help_category = _
           ; num_occurrences = _
           ; check_available = _
           ; name_matching
@@ -1454,6 +1491,11 @@ module Command_base = struct
   let path_key = Env.key_create "path"
   let args_key = Env.key_create "args"
   let help_key = Env.key_create "help"
+
+  let help_category_key : (Shape.Help_category.t -> string) Env.Key.t =
+    Env.key_create "help-category"
+  ;;
+
   let normalized_path_and_args = ref None
 
   let indent_by_2 str =
@@ -1473,7 +1515,7 @@ module Command_base = struct
     match action with
     | Print_info_and_quit _info -> [ flag ]
     | No_arg _f -> [ flag ]
-    | Arg (_f, _comp) ->
+    | Arg (_, _) | Print_info_and_quit_with_arg (_, _) ->
       (match args with
        | Cons (arg, _rest) -> [ flag; arg ]
        | Nil | Complete _ -> [])
@@ -1491,6 +1533,16 @@ module Command_base = struct
       else (
         print_endline (info env);
         exit 0)
+    | Print_info_and_quit_with_arg (info, comp) ->
+      (match args with
+       | Nil -> die "missing argument for flag %s" flag ()
+       | Cons (arg, rest) ->
+         if Cmdline.ends_in_complete rest
+         then env, rest
+         else (
+           print_endline (info env arg);
+           exit 0)
+       | Complete part -> Nothing.unreachable_code (Completer.run_and_exit comp env ~part))
     | No_arg f -> f env, args
     | Arg (f, comp) ->
       (match args with
@@ -1789,6 +1841,7 @@ module Command_base = struct
                      | Some additional_documentation ->
                        [%string "%{doc} %{additional_documentation}"]
                      | None -> doc)
+                ; help_category = None
                 ; action
                 ; num_occurrences
                 ; check_available
@@ -1842,6 +1895,17 @@ module Command_base = struct
           ~doc
       ;;
     end
+
+    let categorize ?(override = false) t ~category =
+      { t with
+        flags =
+          (fun () ->
+            List.map (t.flags ()) ~f:(fun (flag : Flag.Internal.t) ->
+              match flag.help_category with
+              | Some (_ : Shape.Help_category.t) when not override -> flag
+              | None | Some _ -> { flag with help_category = Some category }))
+      }
+    ;;
 
     let return v =
       { f = (fun () -> return (fun () -> Parsing_outcome.return_no_arg v))
@@ -2295,6 +2359,7 @@ module Command_base = struct
     end
 
     let arg_names = Param.arg_names
+    let categorize = Param.categorize
 
     module If_nothing_chosen = Param.Choose_one.If_nothing_chosen
 
@@ -2420,10 +2485,73 @@ module Bailout_dump_flag = struct
         ; check_available = ignore
         ; action = Print_info_and_quit (fun env -> text env)
         ; doc = sprintf " print %s and exit" text_summary
+        ; help_category = None
         ; name_matching = `Prefix
         }
     in
     { base with flags }
+  ;;
+end
+
+module Help_category_flag = struct
+  let validate_abbreviations categories =
+    categories
+    |> List.map ~f:(fun category ->
+      Shape.Help_category.abbrev category, Shape.Help_category.name category)
+    |> List.Assoc.sort_and_group ~compare:String.compare
+    |> List.iter ~f:(fun (abbrev, category_names) ->
+      let category_names = List.dedup_and_sort category_names ~compare:String.compare in
+      match category_names with
+      | [] | [ _ ] -> ()
+      | _ :: _ :: _ ->
+        raise_s
+          [%message
+            "Help categories with different names have the same abbreviation"
+              (abbrev : string)
+              (category_names : string list)])
+  ;;
+
+  let add base =
+    let categories =
+      Map.data base.Command_base.flags
+      |> List.filter_map ~f:(fun flag -> flag.Flag.Internal.help_category)
+      |> List.dedup_and_sort ~compare:Shape.Help_category.compare
+    in
+    validate_abbreviations categories;
+    match categories with
+    | [] -> base
+    | _ :: _ ->
+      let name = "-help-category" in
+      let arg_type =
+        Arg_type.of_alist_exn
+          (List.map categories ~f:(fun category ->
+             Shape.Help_category.abbrev category, category))
+      in
+      let doc =
+        let base = "CATEGORY print help for flags in this category and exit" in
+        match Lazy.force (Arg_type.additional_documentation arg_type) with
+        | None -> base
+        | Some additional -> String.concat ~sep:" " [ base; additional ]
+      in
+      let info env arg =
+        let category = Flag.parse_arg name arg_type arg in
+        (Env.find_exn env Command_base.help_category_key) category
+      in
+      (* Requiring the full flag name preserves prefixes such as [-h] for [-help]. *)
+      let flag : Flag.Internal.t =
+        { name
+        ; aliases_excluded_from_help = []
+        ; aliases = [ "-help-cat" ]
+        ; num_occurrences = Flag.Num_occurrences.at_most_once
+        ; check_available = ignore
+        ; action = Print_info_and_quit_with_arg (info, Arg_type.complete arg_type)
+        ; doc
+        ; help_category = None
+        ; name_matching = `Full_match_required
+        }
+      in
+      let flags = Flag.Internal.create (flag :: Map.data base.flags) in
+      { base with flags }
   ;;
 end
 
@@ -2450,6 +2578,7 @@ let basic ~summary ?readme { Command_base.Param.usage; flags; f } =
       ~text_summary:"this help text"
       ~text:(fun env -> Lazy.force (Env.find_exn env Command_base.help_key))
   in
+  let base = Help_category_flag.add base in
   Base base
 ;;
 
@@ -2974,7 +3103,9 @@ struct
           let path = Path.append path ~subcommand in
           let name = string_of_path path in
           let doc = Shape.get_summary shape in
-          let acc = { Shape.Flag_info.name; doc; aliases = [] } :: acc in
+          let acc =
+            { Shape.Flag_info.name; doc; aliases = []; help_category = None } :: acc
+          in
           if recursive then loop path acc shape else acc)
       in
       match shape with
@@ -3010,19 +3141,63 @@ struct
          ])
   ;;
 
+  let flag_help_text flags ~help_category =
+    let sections =
+      match help_category with
+      | Some help_category ->
+        let flags =
+          List.filter flags ~f:(fun (flag : Shape.Flag_info.t) ->
+            match flag.help_category with
+            | None -> false
+            | Some flag_category ->
+              String.equal
+                (Shape.Help_category.name help_category)
+                (Shape.Help_category.name flag_category))
+        in
+        if List.is_empty flags
+        then []
+        else [ Shape.Help_category.name help_category, flags ]
+      | None ->
+        let uncategorized, categorized =
+          List.partition_map flags ~f:(fun (flag : Shape.Flag_info.t) ->
+            match flag.help_category with
+            | None -> First flag
+            | Some category -> Second (Shape.Help_category.name category, flag))
+        in
+        ("flags", uncategorized)
+        :: List.Assoc.sort_and_group categorized ~compare:String.compare
+    in
+    match sections with
+    | [] -> None
+    | _ :: _ ->
+      let display flags =
+        List.sort flags ~compare:(Comparable.lift String.compare ~f:Shape.Flag_info.name)
+        |> Shape.Flag_help_display.sort
+        |> Shape.Flag_help_display.to_string
+        |> String.rstrip
+      in
+      List.map sections ~f:(fun (name, flags) ->
+        unparagraphs [ [%string "=== %{name} ==="]; display flags ])
+      |> unparagraphs
+      |> sprintf "%s\n"
+      |> Option.return
+  ;;
+
+  let base_help_text b path ~help_category =
+    let usage = Shape.Base_info.get_usage b in
+    unparagraphs
+      (List.filter_opt
+         [ Some b.summary
+         ; Some ("  " ^ Path.to_string path ^ " " ^ usage)
+         ; b.readme
+         ; flag_help_text b.flags ~help_category
+         ])
+  ;;
+
   let rec help_for_shape shape path ~expand_dots ~flags ~recursive =
     let format_list = gather_help ~expand_dots ~flags ~recursive shape in
     match shape with
-    | Basic b ->
-      let usage = Shape.Base_info.get_usage b in
-      unparagraphs
-        (List.filter_opt
-           [ Some b.summary
-           ; Some ("  " ^ Path.to_string path ^ " " ^ usage)
-           ; b.readme
-           ; Some "=== flags ==="
-           ; Some (Shape.Flag_help_display.to_string b.flags)
-           ])
+    | Basic b -> base_help_text b path ~help_category:None
     | Group g ->
       group_or_exec_help_text
         ~flags
@@ -3166,6 +3341,7 @@ struct
           ; action =
               No_arg (fun env -> Env.set ~key:key_internal_validate_parsing ~data:() env)
           ; doc = " validate arguments are parsed correctly and exit immediately"
+          ; help_category = None
           ; name_matching = `Prefix
           }
       in
@@ -3236,9 +3412,13 @@ struct
         ~complete_subcommands
     | Base base ->
       let args = maybe_apply_extend args ~extend ~path in
+      let base_shape = lazy (Command_base.shape base) in
       let help_text =
-        lazy
-          (help_for_shape (shape t) path ~recursive:false ~flags:true ~expand_dots:false)
+        lazy (base_help_text (Lazy.force base_shape) path ~help_category:None)
+      in
+      let env =
+        Env.set env ~key:Command_base.help_category_key ~data:(fun help_category ->
+          base_help_text (Lazy.force base_shape) path ~help_category:(Some help_category))
       in
       Command_base.run
         base
@@ -3473,6 +3653,7 @@ module Param = struct
       -> doc:string
       -> 'a t
 
+    val categorize : ?override:bool -> 'a t -> category:Help_category.t -> 'a t
     val anon : 'a Anons.t -> 'a t
     val escape_anon : final_anon:'a Anons.t -> ('a * string list) t
 

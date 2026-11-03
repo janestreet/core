@@ -9,8 +9,8 @@ module Definitions = struct
   [@@@mode.default m = (local, global)]
 
   module type%template
-    [@mode m] [@modality p = (portable, nonportable)] Comparable_plain_arg =
-    Comparable.Using_comparator_arg [@mode m] [@modality p]
+    [@mode m] [@modality p = (portable, nonportable)]
+    Comparable_plain_arg = Comparable.Using_comparator_arg [@mode m] [@modality p]
 
   module type Comparable_arg = sig
     type t : value_or_null [@@deriving (compare [@mode.explicit m]), sexp]
@@ -61,9 +61,14 @@ module type Tuple = sig @@ portable
       : ('a : value_or_null) ('b : value_or_null) ('c : value_or_null).
       ('a -> 'b -> 'c) -> ('a, 'b) t -> 'c
 
-    val compare
+    val%template compare
       : ('a : value_or_null) ('b : value_or_null).
-      cmp1:('a -> 'a -> int) -> cmp2:('b -> 'b -> int) -> ('a, 'b) t -> ('a, 'b) t -> int
+      cmp1:('a @ m -> 'a @ m -> int)
+      -> cmp2:('b @ m -> 'b @ m -> int)
+      -> ('a, 'b) t @ m
+      -> ('a, 'b) t @ m
+      -> int
+    [@@mode m = (global, local)]
 
     val equal
       : ('a : value_or_null) ('b : value_or_null).
@@ -250,7 +255,8 @@ module type Tuple = sig @@ portable
   [@@@mode.default m = (local, global)]
 
   module%template.portable
-    [@modality p] Comparable_plain
+    [@modality p]
+    Comparable_plain
       (S1 : Comparable_plain_arg
     [@mode m] [@modality p])
       (S2 : Comparable_plain_arg

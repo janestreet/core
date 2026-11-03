@@ -132,10 +132,12 @@ module Generator = struct
   include Generator
   open Let_syntax
 
-  let singleton = return
+  let%template singleton = (return [@mode p]) [@@mode p = (nonportable, portable)]
 
-  let doubleton x y =
-    create (fun ~size:_ ~random -> if Splittable_random.bool random then x else y)
+  let%template doubleton (type a : value_or_null mod c) (x : a) (y : a) =
+    (create [@mode p]) (fun ~size:_ ~random ->
+      if Splittable_random.bool random then x else y)
+  [@@mode (p, c) = ((nonportable, uncontended), (portable, contended))]
   ;;
 
   let of_fun f = create (fun ~size ~random -> generate (f ()) ~size ~random)

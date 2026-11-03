@@ -9,7 +9,7 @@
 
 open! Import
 
-type 'a t
+type 'a t : immutable_data with 'a
 [@@deriving
   bin_io ~localize
   , compare ~localize

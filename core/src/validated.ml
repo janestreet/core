@@ -106,7 +106,8 @@ end
 [@@@mode.default m = (global, local)]
 
 module%template.portable
-  [@modality p] Add_bin_io
+  [@modality p]
+  Add_bin_io
     (Raw : Raw_bin_io
   [@mode m])
     (Validated : S with type raw := Raw.t) =
@@ -142,7 +143,8 @@ module%template.portable [@modality p] Make_binable (Raw : Raw_bin_io [@mode m])
 end
 
 module%template.portable
-  [@modality p] Make_bin_io_compare_hash_sexp
+  [@modality p]
+  Make_bin_io_compare_hash_sexp
     (Raw : Raw_bin_io_compare_hash_sexp
   [@mode m]) =
 struct
@@ -153,7 +155,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_bin_io_compare_globalize_hash_sexp
+  [@modality p]
+  Make_bin_io_compare_globalize_hash_sexp
     (Raw : Raw_bin_io_compare_globalize_hash_sexp
   [@mode m]) =
 struct

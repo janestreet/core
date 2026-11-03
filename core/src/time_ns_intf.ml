@@ -1,15 +1,6 @@
 open! Import
 open! Std_internal
 
-module Rounding_direction = struct
-  type t =
-    | Down
-    | Nearest
-    | Up
-    | Zero
-  [@@deriving equal ~localize, enumerate, sexp_of]
-end
-
 module type Span = sig @@ portable
   (** [t] is immediate on 64bit boxes and so plays nicely with the GC write barrier. *)
   type t = private Int63.t [@@deriving hash, typerep, sexp_of ~stackify]
@@ -81,7 +72,7 @@ module type Span = sig @@ portable
 
   val of_int_ns : int -> t
   val since_unix_epoch : unit -> t [@@zero_alloc]
-  val random : ?state:Random.State.t -> unit -> t
+  val random : ?state:Random.State.t @ local -> unit -> t
 
   (** WARNING!!! [to_span] and [of_span] both round to the nearest 1us.
 
@@ -105,7 +96,14 @@ module type Span = sig @@ portable
   val of_span_float_round_nearest : Span_float.t -> t
   val of_span_float_round_nearest_microsecond : Span_float.t -> t
 
-  module Rounding_direction = Rounding_direction
+  module Rounding_direction : sig
+    type t =
+      | Down
+      | Nearest
+      | Up
+      | Zero
+    [@@deriving equal ~localize, enumerate, sexp_of]
+  end
 
   (** These operations round the span to the nearest whole-number of the given factor. *)
 
@@ -399,20 +397,26 @@ module type Time_ns = sig @@ portable
     val of_ofday_float_round_nearest_microsecond : Time_float.Ofday.t -> t [@@zero_alloc]
 
     module Zoned : sig
-      (** [t_of_sexp] accepts short forms like "(12:01 nyc)". [sexp_of_t] produces the
-          full ofday and zone name, e.g., "(12:01:00.000000000 America/New_York)".
+      (** [t_of_sexp] accepts short forms like "(12:01 America/New_York)". [sexp_of_t]
+          produces the full ofday and zone name, e.g., "(12:01:00.000000000
+          America/New_York)".
 
           Two [t]'s may or may not correspond to the same times depending on which date
           they're evaluated. *)
       type ofday := t
 
-      type t : sync_data [@@deriving bin_io, sexp, sexp_grammar, hash]
+      type t : sync_data
+      [@@deriving bin_io ~localize, globalize, sexp ~stackify, sexp_grammar, hash]
 
       include Pretty_printer.S with type t := t
 
-      (** [of_string] accepts short forms like "12:01 nyc". [to_string] produces the full
-          ofday and zone name, e.g., "12:01:00.000000000 America/New_York". *)
+      (** [of_string] accepts short forms like "12:01 America/New_York". [to_string]
+          produces the full ofday and zone name, e.g., "12:01:00.000000000
+          America/New_York". *)
       include Stringable.S with type t := t
+
+      (** Like [to_string] but uses [Time_ns.Ofday.to_string_trimmed] to format the ofday. *)
+      val to_string_trimmed : t -> string
 
       val arg_type : t Command.Arg_type.t
       val create : ofday -> Time_float.Zone.t -> t
@@ -421,18 +425,42 @@ module type Time_ns = sig @@ portable
       val zone : t -> Time_float.Zone.t
       val to_time_ns : t -> Date.t -> time_ns
 
+      (** [add t span] shifts the time of day in [t] by [span], keeping the same zone. It
+          returns [None] if the result is not in the same 24-hour day. *)
+      val add : t -> Span.t -> t option
+
+      (** [sub t span] shifts the time of day in [t] back by [span], keeping the same
+          zone. It returns [None] if the result is not in the same 24-hour day. *)
+      val sub : t -> Span.t -> t option
+
+      (** [add_exn t span] shifts the time of day in [t] by [span], keeping the same zone.
+          It raises if the result is not in the same 24-hour day. *)
+      val add_exn : t -> Span.t -> t
+
+      (** [sub_exn t span] shifts the time of day in [t] back by [span], keeping the same
+          zone. It raises if the result is not in the same 24-hour day. *)
+      val sub_exn : t -> Span.t -> t
+
       module With_nonchronological_compare : sig
         (** It is possible to consistently compare [t]'s, but due to the complexities of
             time zones and daylight savings, the resulting ordering is not chronological.
             That is, [compare t1 t2 > 0] does not imply [t2] occurs after [t1] every day,
             or any day. *)
         type nonrec t = t
-        [@@deriving bin_io, sexp, sexp_grammar, compare ~localize, equal ~localize, hash]
+        [@@deriving
+          bin_io ~localize
+          , compare ~localize
+          , equal ~localize
+          , globalize
+          , hash
+          , sexp ~stackify
+          , sexp_grammar]
       end
 
       module Stable : sig
         module V1 : sig
-          type nonrec t = t [@@deriving equal ~localize, hash, sexp_grammar]
+          type nonrec t = t
+          [@@deriving equal ~localize, hash, sexp ~stackify, sexp_grammar]
 
           include%template
             Stable_without_comparator_with_witness [@mode local] with type t := t
@@ -718,7 +746,7 @@ module type Time_ns = sig @@ portable
       units that evenly divide into a second, call with [base = epoch], [after] as the
       time to round, and [interval] as the unit span you are rounding to. *)
   val next_multiple
-    :  ?can_equal_after:local_ bool (** default is [false] *)
+    :  ?can_equal_after:bool (** default is [false] *) @ local
     -> base:t
     -> after:t
     -> interval:Span.t
@@ -785,7 +813,7 @@ module type Time_ns = sig @@ portable
       Returns an [Error] if [interval <= Span.zero || start > stop]. *)
   val every : Span.t -> start:t -> stop:t -> t list Or_error.t
 
-  val random : ?state:Random.State.t -> unit -> t
+  val random : ?state:Random.State.t @ local -> unit -> t
 
   val of_time : Time_float.t -> t
   [@@deprecated
@@ -913,6 +941,7 @@ module type Time_ns = sig @@ portable
           bin_io ~localize
           , compare ~localize
           , equal ~localize
+          , globalize
           , hash
           , sexp
           , sexp_grammar

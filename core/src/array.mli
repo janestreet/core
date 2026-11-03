@@ -11,14 +11,28 @@ open Perms.Export
 
 type ('a : any mod separable) t = 'a Base.Array.t
 
+type%template ('a : k mod separable) t = ('a Base.Array.t[@kind k])
+[@@kind k = (base_non_value, value_or_null mod external64)]
+
+[%%template:
+[@@@kind k = (base_or_null, value_or_null mod external64)]
+
 [%%rederive:
-  type nonrec ('a : value_or_null mod separable) t = 'a t [@@deriving bin_io ~localize]]
+  type nonrec ('a : k mod separable) t = ('a t[@kind k])
+  [@@deriving bin_io ~localize] [@@kind k]]]
 
 [%%rederive: type nonrec 'a t = 'a t [@@deriving quickcheck ~portable, typerep]]
 
 (** {2 The signature included from [Base.Array]} *)
 
-include Base.Array.Public with type ('a : any mod separable) t := 'a t (** @inline *)
+include%template
+  Base.Array.Public
+[@with:
+  type ('a : any mod separable) t := 'a t
+
+  type ('a : k mod separable) t := ('a t[@kind k])
+  [@@kind k = (base_non_value, value_or_null mod external64)]]
+(** @inline *)
 
 (** {2 Extensions}
 
@@ -248,7 +262,7 @@ module Permissioned : sig
 
   external magic_create_uninitialized
     :  len:int
-    -> (('a, [< 'perm perms ]) t[@local_opt])
+    -> (('a, [< 'perm perms ]) t[@local_opt]) @ unique
     = "%makearray_dynamic_uninit"
   [@@ocaml.doc
     {| [magic_create_uninitialized ~len] creates an array of length [len] with
@@ -265,89 +279,89 @@ module Permissioned : sig
         caution. |}]
 
   val create_float_uninitialized : len:int -> (float, [< _ perms ]) t
-  val init : int -> f:local_ (int -> 'a) -> ('a, [< _ perms ]) t
+  val init : int -> f:(int -> 'a) @ local -> ('a, [< _ perms ]) t
   val make_matrix : dimx:int -> dimy:int -> 'a -> (('a, [< _ perms ]) t, [< _ perms ]) t
 
   val copy_matrix
-    :  local_ (('a, [> read ]) t, [> read ]) t
+    :  (('a, [> read ]) t, [> read ]) t @ local
     -> (('a, [< _ perms ]) t, [< _ perms ]) t
 
   val append : ('a, [> read ]) t -> ('a, [> read ]) t -> ('a, [< _ perms ]) t
-  val concat : local_ ('a, [> read ]) t list -> ('a, [< _ perms ]) t
-  val copy : local_ ('a, [> read ]) t -> ('a, [< _ perms ]) t
-  val fill : local_ ('a, [> write ]) t -> pos:int -> len:int -> 'a -> unit
+  val concat : ('a, [> read ]) t list @ local -> ('a, [< _ perms ]) t
+  val copy : ('a, [> read ]) t @ local -> ('a, [< _ perms ]) t
+  val fill : ('a, [> write ]) t @ local -> pos:int -> len:int -> 'a -> unit
   val of_list : 'a list -> ('a, [< _ perms ]) t
-  val map : ('a, [> read ]) t -> f:local_ ('a -> 'b) -> ('b, [< _ perms ]) t
-  val mapi : ('a, [> read ]) t -> f:local_ (int -> 'a -> 'b) -> ('b, [< _ perms ]) t
+  val map : ('a, [> read ]) t -> f:('a -> 'b) @ local -> ('b, [< _ perms ]) t
+  val mapi : ('a, [> read ]) t -> f:(int -> 'a -> 'b) @ local -> ('b, [< _ perms ]) t
 
   val folding_map
     :  ('a, [> read ]) t
     -> init:'b
-    -> f:local_ ('b -> 'a -> 'b * 'c)
+    -> f:('b -> 'a -> 'b * 'c) @ local
     -> ('c, [< _ perms ]) t
 
   val fold_map
     :  ('a, [> read ]) t
     -> init:'b
-    -> f:local_ ('b -> 'a -> 'b * 'c)
+    -> f:('b -> 'a -> 'b * 'c) @ local
     -> 'b * ('c, [< _ perms ]) t
 
-  val iteri : ('a, [> read ]) t -> f:local_ (int -> 'a -> unit) -> unit
-  val foldi : ('a, [> read ]) t -> init:'b -> f:local_ (int -> 'b -> 'a -> 'b) -> 'b
+  val iteri : ('a, [> read ]) t -> f:(int -> 'a -> unit) @ local -> unit
+  val foldi : ('a, [> read ]) t -> init:'b -> f:(int -> 'b -> 'a -> 'b) @ local -> 'b
 
   val folding_mapi
     :  ('a, [> read ]) t
     -> init:'b
-    -> f:local_ (int -> 'b -> 'a -> 'b * 'c)
+    -> f:(int -> 'b -> 'a -> 'b * 'c) @ local
     -> ('c, [< _ perms ]) t
 
   val fold_mapi
     :  ('a, [> read ]) t
     -> init:'b
-    -> f:local_ (int -> 'b -> 'a -> 'b * 'c)
+    -> f:(int -> 'b -> 'a -> 'b * 'c) @ local
     -> 'b * ('c, [< _ perms ]) t
 
-  val fold_right : ('a, [> read ]) t -> f:local_ ('a -> 'b -> 'b) -> init:'b -> 'b
+  val fold_right : ('a, [> read ]) t -> f:('a -> 'b -> 'b) @ local -> init:'b -> 'b
 
   val sort
     :  ?pos:int
     -> ?len:int
-    -> local_ ('a, [> read_write ]) t
-    -> compare:local_ ('a -> 'a -> int)
+    -> ('a, [> read_write ]) t @ local
+    -> compare:('a -> 'a -> int) @ local
     -> unit
 
   val stable_sort : ('a, [> read_write ]) t -> compare:('a -> 'a -> int) -> unit
-  val is_sorted : local_ ('a, [> read ]) t -> compare:local_ ('a -> 'a -> int) -> bool
+  val is_sorted : ('a, [> read ]) t @ local -> compare:('a -> 'a -> int) @ local -> bool
 
   val is_sorted_strictly
-    :  local_ ('a, [> read ]) t
-    -> compare:local_ ('a -> 'a -> int)
+    :  ('a, [> read ]) t @ local
+    -> compare:('a -> 'a -> int) @ local
     -> bool
 
   val merge
     :  ('a, [> read ]) t
     -> ('a, [> read ]) t
-    -> compare:local_ ('a -> 'a -> int)
+    -> compare:('a -> 'a -> int) @ local
     -> ('a, [< _ perms ]) t
 
   val concat_map
     :  ('a, [> read ]) t
-    -> f:local_ ('a -> ('b, [> read ]) t)
+    -> f:('a -> ('b, [> read ]) t) @ local
     -> ('b, [< _ perms ]) t
 
   val concat_mapi
     :  ('a, [> read ]) t
-    -> f:local_ (int -> 'a -> ('b, [> read ]) t)
+    -> f:(int -> 'a -> ('b, [> read ]) t) @ local
     -> ('b, [< _ perms ]) t
 
   val partition_tf
     :  ('a, [> read ]) t
-    -> f:local_ ('a -> bool)
+    -> f:('a -> bool) @ local
     -> ('a, [< _ perms ]) t * ('a, [< _ perms ]) t
 
   val partitioni_tf
     :  ('a, [> read ]) t
-    -> f:local_ (int -> 'a -> bool)
+    -> f:(int -> 'a -> bool) @ local
     -> ('a, [< _ perms ]) t * ('a, [< _ perms ]) t
 
   val cartesian_product
@@ -368,78 +382,82 @@ module Permissioned : sig
   val nget : ('a, [> read ]) t -> int -> 'a
   val nset : ('a, [> write ]) t -> int -> 'a -> unit
   val filter_opt : ('a option, [> read ]) t -> ('a, [< _ perms ]) t
-  val filter_map : ('a, [> read ]) t -> f:local_ ('a -> 'b option) -> ('b, [< _ perms ]) t
+
+  val filter_map
+    :  ('a, [> read ]) t
+    -> f:('a -> 'b option) @ local
+    -> ('b, [< _ perms ]) t
 
   val filter_mapi
     :  ('a, [> read ]) t
-    -> f:local_ (int -> 'a -> 'b option)
+    -> f:(int -> 'a -> 'b option) @ local
     -> ('b, [< _ perms ]) t
 
-  val for_alli : ('a, [> read ]) t -> f:local_ (int -> 'a -> bool) -> bool
-  val existsi : ('a, [> read ]) t -> f:local_ (int -> 'a -> bool) -> bool
-  val counti : ('a, [> read ]) t -> f:local_ (int -> 'a -> bool) -> int
+  val for_alli : ('a, [> read ]) t -> f:(int -> 'a -> bool) @ local -> bool
+  val existsi : ('a, [> read ]) t -> f:(int -> 'a -> bool) @ local -> bool
+  val counti : ('a, [> read ]) t -> f:(int -> 'a -> bool) @ local -> int
 
   val iter2_exn
     :  ('a, [> read ]) t
     -> ('b, [> read ]) t
-    -> f:local_ ('a -> 'b -> unit)
+    -> f:('a -> 'b -> unit) @ local
     -> unit
 
   val map2_exn
     :  ('a, [> read ]) t
     -> ('b, [> read ]) t
-    -> f:local_ ('a -> 'b -> 'c)
+    -> f:('a -> 'b -> 'c) @ local
     -> ('c, [< _ perms ]) t
 
   val fold2_exn
     :  ('a, [> read ]) t
     -> ('b, [> read ]) t
     -> init:'c
-    -> f:local_ ('c -> 'a -> 'b -> 'c)
+    -> f:('c -> 'a -> 'b -> 'c) @ local
     -> 'c
 
   val for_all2_exn
     :  ('a, [> read ]) t
     -> ('b, [> read ]) t
-    -> f:local_ ('a -> 'b -> bool)
+    -> f:('a -> 'b -> bool) @ local
     -> bool
 
   val exists2_exn
     :  ('a, [> read ]) t
     -> ('b, [> read ]) t
-    -> f:local_ ('a -> 'b -> bool)
+    -> f:('a -> 'b -> bool) @ local
     -> bool
 
-  val filter : ('a, [> read ]) t -> f:local_ ('a -> bool) -> ('a, [< _ perms ]) t
-  val filteri : ('a, [> read ]) t -> f:local_ (int -> 'a -> bool) -> ('a, [< _ perms ]) t
-  val swap : local_ ('a, [> read_write ]) t -> int -> int -> unit
-  val rev_inplace : local_ ('a, [> read_write ]) t -> unit
+  val filter : ('a, [> read ]) t -> f:('a -> bool) @ local -> ('a, [< _ perms ]) t
+  val filteri : ('a, [> read ]) t -> f:(int -> 'a -> bool) @ local -> ('a, [< _ perms ]) t
+  val swap : ('a, [> read_write ]) t @ local -> int -> int -> unit
+  val rev_inplace : ('a, [> read_write ]) t @ local -> unit
   val of_list_rev : 'a list -> ('a, [< _ perms ]) t
-  val of_list_map : 'a list -> f:local_ ('a -> 'b) -> ('b, [< _ perms ]) t
-  val of_list_mapi : 'a list -> f:local_ (int -> 'a -> 'b) -> ('b, [< _ perms ]) t
-  val of_list_rev_map : 'a list -> f:local_ ('a -> 'b) -> ('b, [< _ perms ]) t
-  val of_list_rev_mapi : 'a list -> f:local_ (int -> 'a -> 'b) -> ('b, [< _ perms ]) t
-  val map_inplace : local_ ('a, [> read_write ]) t -> f:local_ ('a -> 'a) -> unit
-  val find_exn : ('a, [> read ]) t -> f:local_ ('a -> bool) -> 'a
-  val find_map_exn : ('a, [> read ]) t -> f:local_ ('a -> 'b option) -> 'b
-  val findi : ('a, [> read ]) t -> f:local_ (int -> 'a -> bool) -> (int * 'a) option
-  val findi_exn : ('a, [> read ]) t -> f:local_ (int -> 'a -> bool) -> int * 'a
-  val find_mapi : ('a, [> read ]) t -> f:local_ (int -> 'a -> 'b option) -> 'b option
-  val find_mapi_exn : ('a, [> read ]) t -> f:local_ (int -> 'a -> 'b option) -> 'b
+  val of_list_map : 'a list -> f:('a -> 'b) @ local -> ('b, [< _ perms ]) t
+  val of_list_mapi : 'a list -> f:(int -> 'a -> 'b) @ local -> ('b, [< _ perms ]) t
+  val of_list_rev_map : 'a list -> f:('a -> 'b) @ local -> ('b, [< _ perms ]) t
+  val of_list_rev_mapi : 'a list -> f:(int -> 'a -> 'b) @ local -> ('b, [< _ perms ]) t
+  val map_inplace : ('a, [> read_write ]) t @ local -> f:('a -> 'a) @ local -> unit
+  val find_exn : ('a, [> read ]) t -> f:('a -> bool) @ local -> 'a
+  val find_map_exn : ('a, [> read ]) t -> f:('a -> 'b option) @ local -> 'b
+  val findi : ('a, [> read ]) t -> f:(int -> 'a -> bool) @ local -> (int * 'a) option
+  val findi_exn : ('a, [> read ]) t -> f:(int -> 'a -> bool) @ local -> int * 'a
+  val find_mapi : ('a, [> read ]) t -> f:(int -> 'a -> 'b option) @ local -> 'b option
+  val find_mapi_exn : ('a, [> read ]) t -> f:(int -> 'a -> 'b option) @ local -> 'b
 
   val find_consecutive_duplicate
     :  ('a, [> read ]) t
-    -> equal:local_ ('a -> 'a -> bool)
+    -> equal:('a -> 'a -> bool) @ local
     -> ('a * 'a) option
 
-  val reduce : ('a, [> read ]) t -> f:local_ ('a -> 'a -> 'a) -> 'a option
-  val reduce_exn : ('a, [> read ]) t -> f:local_ ('a -> 'a -> 'a) -> 'a
+  val reduce : ('a, [> read ]) t -> f:('a -> 'a -> 'a) @ local -> 'a option
+  val reduce_exn : ('a, [> read ]) t -> f:('a -> 'a -> 'a) @ local -> 'a
 
   val permute
-    :  ?random_state:Random.State.t
+    :  ?random_state:Random.State.t @ local
     -> ?pos:int
     -> ?len:int
-    -> local_ ('a, [> read_write ]) t
+    -> ('a, [> read_write ]) t @ local
     -> unit
 
   val zip : ('a, [> read ]) t -> ('b, [> read ]) t -> ('a * 'b, [< _ perms ]) t option
@@ -447,8 +465,8 @@ module Permissioned : sig
   val unzip : ('a * 'b, [> read ]) t -> ('a, [< _ perms ]) t * ('b, [< _ perms ]) t
 
   val sorted_copy
-    :  local_ ('a, [> read ]) t
-    -> compare:local_ ('a -> 'a -> int)
+    :  ('a, [> read ]) t @ local
+    -> compare:('a -> 'a -> int) @ local
     -> ('a, [< _ perms ]) t
 
   val last : ('a, [> read ]) t -> 'a

@@ -1,4 +1,9 @@
 (module
+   (@if $portable-int
+   (@then
+      (import "env" "int_val_32_exn"
+         (func $int_val_32_exn (param (ref eq)) (param (ref eq)) (result i32)))
+   ))
    (import "env" "caml_array_blit"
       (func $caml_array_blit
          (param (ref eq)) (param (ref eq)) (param (ref eq)) (param (ref eq))
@@ -59,6 +64,8 @@
       (func $caml_ba_get_data (param (ref eq)) (result (ref extern))))
    (import "env" "caml_ba_set_data"
       (func $caml_ba_set_data (param (ref eq)) (param (ref extern))))
+   (import "env" "caml_ba_set_view"
+      (func $caml_ba_set_view (param (ref eq)) (param (ref extern))))
    (import "env" "caml_ba_get_dim"
       (func $caml_ba_get_dim (param (ref eq)) (result (ref $int_array))))
    (import "env" "caml_ba_sub"
@@ -68,15 +75,23 @@
        (func $caml_ba_blit (param (ref eq)) (param (ref eq)) (result (ref eq))))
    (import "env" "caml_ba_dim_1"
        (func $caml_ba_dim_1 (param (ref eq)) (result (ref eq))))
+   (@if $portable-int
+   (@then
+      (import "env" "portable_int_val_32"
+         (func $portable_int_val_32 (param (ref eq)) (result i32)))
+   ))
 
    (export "core_array_unsafe_int_blit" (func $caml_array_blit))
 
    (type $block (array (mut (ref eq))))
    (type $string (array (mut i8)))
+   (type $bytes (array (mut i8)))
    (type $float (struct (field f64)))
 
    (data $Date "Date")
    (data $strftime "strftime")
+
+   (@string $bigstring_realloc "Bigstring.unsafe_destroy_and_resize")
 
    (func (export "core_gc_compactions") (param (ref eq)) (result (ref eq))
       (ref.i31 (i32.const 0)))
@@ -149,13 +164,15 @@
    (func $bigstring_destroy_stub (export "bigstring_destroy_stub")
       (param $v (ref eq)) (result (ref eq))
       (if (ref.test (ref i31)
-            (extern.internalize (call $caml_ba_get_data (local.get $v))))
+            (any.convert_extern (call $caml_ba_get_data (local.get $v))))
          (then
             (call $caml_invalid_argument
                (array.new_data $string $bigstring_destroy_already_deallocated
                   (i32.const 0) (i32.const 51)))))
       (call $caml_ba_set_data (local.get $v)
-         (extern.externalize (ref.i31 (i32.const 0))))
+         (extern.convert_any (ref.i31 (i32.const 0))))
+      (call $caml_ba_set_view (local.get $v)
+         (extern.convert_any (ref.i31 (i32.const 0))))
       (array.set $int_array (call $caml_ba_get_dim (local.get $v)) (i32.const 0)
          (i32.const 0))
       (ref.i31 (i32.const 0)))
@@ -169,9 +186,15 @@
       (local $new_bigstring (ref eq))
       (local $size i32) (local $old_size i32)
       (local $new_data (ref extern))
-      (local.set $size (i31.get_u (ref.cast (ref i31) (local.get $vsize))))
+      (local.set $size (@if $portable-int
+                       (@then
+                          (call $int_val_32_exn (local.get $vsize)
+                             (global.get $bigstring_realloc)))
+                       (@else
+                          (i31.get_u (ref.cast (ref i31) (local.get $vsize))))
+                       ))
       (if (ref.test (ref i31)
-            (extern.internalize
+            (any.convert_extern
                (call $caml_ba_get_data (local.get $bigstring))))
          (then
             (call $caml_invalid_argument
@@ -189,8 +212,14 @@
             (local.get $new_data)
             (array.new_fixed $int_array 1 (local.get $size))))
       (local.set $old_size
-         (i31.get_u
-            (ref.cast (ref i31) (call $caml_ba_dim_1 (local.get $bigstring)))))
+         (@if $portable-int
+         (@then
+            (call $portable_int_val_32
+               (call $caml_ba_dim_1 (local.get $bigstring))))
+         (@else
+            (i31.get_u
+               (ref.cast (ref i31) (call $caml_ba_dim_1 (local.get $bigstring)))))
+         ))
       (if (i32.lt_u (local.get $old_size) (local.get $size))
          (then
             (local.set $size (local.get $old_size))))

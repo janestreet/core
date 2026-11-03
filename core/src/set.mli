@@ -221,34 +221,34 @@ val%template equal : ('a, 'cmp) t @ m -> ('a, 'cmp) t @ m -> bool
 
 (** [exists t ~f] returns [true] iff there exists an [a] in [t] for which [f a]. [O(n)],
     but returns as soon as it finds an [a] for which [f a]. *)
-val exists : ('a, _) t -> f:local_ ('a -> bool) -> bool
+val exists : ('a, _) t -> f:('a -> bool) @ local -> bool
 
 (** [for_all t ~f] returns [true] iff for all [a] in [t], [f a]. [O(n)], but returns as
     soon as it finds an [a] for which [not (f a)]. *)
-val for_all : ('a, _) t -> f:local_ ('a -> bool) -> bool
+val for_all : ('a, _) t -> f:('a -> bool) @ local -> bool
 
 (** [count t] returns the number of elements of [t] for which [f] returns [true]. [O(n)]. *)
-val count : ('a, _) t -> f:local_ ('a -> bool) -> int
+val count : ('a, _) t -> f:('a -> bool) @ local -> int
 
 (** [sum t] returns the sum of [f t] for each [t] in the set. [O(n)]. *)
 val sum
   :  (module Container.Summable with type t = 'sum)
   -> ('a, _) t
-  -> f:local_ ('a -> 'sum)
+  -> f:('a -> 'sum) @ local
   -> 'sum
 
 (** [find t f] returns an element of [t] for which [f] returns true, with no guarantee as
     to which element is returned. [O(n)], but returns as soon as a suitable element is
     found. *)
-val find : ('a, _) t -> f:local_ ('a -> bool) -> 'a option
+val find : ('a, _) t -> f:('a -> bool) @ local -> 'a option
 
 (** [find_map t f] returns [b] for some [a] in [t] for which [f a = Some b]. If no such
     [a] exists, then [find] returns [None]. [O(n)], but returns as soon as a suitable
     element is found. *)
-val find_map : ('a, _) t -> f:local_ ('a -> 'b option) -> 'b option
+val find_map : ('a, _) t -> f:('a -> 'b option) @ local -> 'b option
 
 (** Like [find], but throws an exception on failure. *)
-val find_exn : ('a, _) t -> f:local_ ('a -> bool) -> 'a
+val find_exn : ('a, _) t -> f:('a -> bool) @ local -> 'a
 
 (** [nth t i] returns the [i]th smallest element of [t], in [O(log n)] time. The smallest
     element has [i = 0]. Returns [None] if [i < 0] or [i >= length t]. *)
@@ -339,7 +339,7 @@ val of_sorted_array_unchecked : ('a, 'cmp) Comparator.Module.t -> 'a array -> ('
 val of_increasing_iterator_unchecked
   :  ('a, 'cmp) Comparator.Module.t
   -> len:int
-  -> f:local_ (int -> 'a)
+  -> f:(int -> 'a) @ local
   -> ('a, 'cmp) t
 
 (** [map c t ~f] returns a new set created by applying [f] to every element in [t]. The
@@ -347,28 +347,28 @@ val of_increasing_iterator_unchecked
 val map
   :  ('b, 'cmp) Comparator.Module.t
   -> ('a, _) t
-  -> f:local_ ('a -> 'b)
+  -> f:('a -> 'b) @ local
   -> ('b, 'cmp) t
 
 (** Like {!map}, except elements for which [f] returns [None] will be dropped. *)
 val filter_map
   :  ('b, 'cmp) Comparator.Module.t
   -> ('a, _) t
-  -> f:local_ ('a -> 'b option)
+  -> f:('a -> 'b option) @ local
   -> ('b, 'cmp) t
 
 (** [filter t ~f] returns the subset of [t] for which [f] evaluates to true. [O(n log n)]. *)
-val filter : ('a, 'cmp) t -> f:local_ ('a -> bool) -> ('a, 'cmp) t
+val filter : ('a, 'cmp) t -> f:('a -> bool) @ local -> ('a, 'cmp) t
 
 (** [fold t ~init ~f] folds over the elements of the set from smallest to largest. *)
-val fold : ('a, _) t -> init:'accum -> f:local_ ('accum -> 'a -> 'accum) -> 'accum
+val fold : ('a, _) t -> init:'accum -> f:('accum -> 'a -> 'accum) @ local -> 'accum
 
 (** [fold_result ~init ~f] folds over the elements of the set from smallest to largest,
     short circuiting the fold if [f accum x] is an [Error _] *)
 val fold_result
   :  ('a, _) t
   -> init:'accum
-  -> f:local_ ('accum -> 'a -> ('accum, 'e) Result.t)
+  -> f:('accum -> 'a -> ('accum, 'e) Result.t) @ local
   -> ('accum, 'e) Result.t
 
 (** [fold_until t ~init ~f] is a short-circuiting version of [fold]. If [f] returns
@@ -377,16 +377,16 @@ val fold_result
 val fold_until
   :  ('a, _) t
   -> init:'accum
-  -> f:local_ ('accum -> 'a -> ('accum, 'final) Continue_or_stop.t)
-  -> finish:local_ ('accum -> 'final)
+  -> f:('accum -> 'a -> ('accum, 'final) Continue_or_stop.t) @ local
+  -> finish:('accum -> 'final) @ local
   -> 'final
 
 (** Like {!fold}, except that it goes from the largest to the smallest element. *)
-val fold_right : ('a, _) t -> init:'accum -> f:local_ ('a -> 'accum -> 'accum) -> 'accum
+val fold_right : ('a, _) t -> init:'accum -> f:('a -> 'accum -> 'accum) @ local -> 'accum
 
 (** [iter t ~f] calls [f] on every element of [t], going in order from the smallest to
     largest. *)
-val iter : ('a, _) t -> f:local_ ('a -> unit) -> unit
+val iter : ('a, _) t -> f:('a -> unit) @ local -> unit
 
 (** Iterate two sets side by side. Complexity is [O(m+n)] where [m] and [n] are the sizes
     of the two input sets. As an example, with the inputs [0; 1] and [1; 2], [f] will be
@@ -394,7 +394,7 @@ val iter : ('a, _) t -> f:local_ ('a -> unit) -> unit
 val iter2
   :  ('a, 'cmp) t
   -> ('a, 'cmp) t
-  -> f:local_ ([ `Left of 'a | `Right of 'a | `Both of 'a * 'a ] -> unit)
+  -> f:([ `Left of 'a | `Right of 'a | `Both of 'a * 'a ] -> unit) @ local
   -> unit
 
 (** [iter_until t ~f ~finish] is a short-circuiting version of [iter]. If [f] returns
@@ -408,7 +408,7 @@ val iter_until
 
 (** If [a, b = partition_tf set ~f] then [a] is the elements on which [f] produced [true],
     and [b] is the elements on which [f] produces [false]. *)
-val partition_tf : ('a, 'cmp) t -> f:local_ ('a -> bool) -> ('a, 'cmp) t * ('a, 'cmp) t
+val partition_tf : ('a, 'cmp) t -> f:('a -> bool) @ local -> ('a, 'cmp) t * ('a, 'cmp) t
 
 (** Same as {!to_list}. *)
 val elements : ('a, _) t -> 'a list
@@ -467,10 +467,25 @@ val split_lt_ge : ('a, 'cmp) t -> 'a -> ('a, 'cmp) t * ('a, 'cmp) t
 
     [group_by] runs in O(n^2) time, so if you have a comparison function, it's usually
     much faster to use [Set.of_list]. *)
-val group_by : ('a, 'cmp) t -> equiv:local_ ('a -> 'a -> bool) -> ('a, 'cmp) t list
+val group_by : ('a, 'cmp) t -> equiv:('a -> 'a -> bool) @ local -> ('a, 'cmp) t list
 [@@deprecated
   "[since 2024-08] This function is slow (O(n^2)) and pretty much never the right thing \
    to use. Consider using [to_list] along with [List.sort_and_group] or [List.group]."]
+
+(** [closest_elt t dir x] returns the element in [t] closest to [x] that satisfies the
+    given inequality bound.
+
+    For example, [closest_elt t `Less_than x] would be the element closest to [x] that is
+    strictly less than [x].
+
+    [to_sequence] can be used to get the same results as [closest_elt]. It is less
+    efficient for individual lookups but more efficient for finding many elements starting
+    at some value. *)
+val closest_elt
+  :  ('a, _) t
+  -> [ `Greater_or_equal_to | `Greater_than | `Less_or_equal_to | `Less_than ]
+  -> 'a
+  -> 'a option
 
 (** [to_sequence t] converts the set [t] to a sequence of the elements between
     [greater_or_equal_to] and [less_or_equal_to] inclusive in the order indicated by
@@ -500,7 +515,7 @@ val to_sequence
     if [compare] doesn't order [t]. Behavior is also unspecified if [compare] mutates [t]. *)
 val binary_search
   :  ('a, 'cmp) t
-  -> compare:local_ ('a -> 'key -> int)
+  -> compare:('a -> 'key -> int) @ local
   -> [ `Last_strictly_less_than (** [         | < elt X |                       ] *)
      | `Last_less_than_or_equal_to (** [      |      <= elt       X |           ] *)
      | `Last_equal_to (** [                             |   = elt X |           ] *)
@@ -528,7 +543,7 @@ val binary_search
     also unspecified if [segment_of] mutates [t]. *)
 val binary_search_segmented
   :  ('a, 'cmp) t
-  -> segment_of:local_ ('a -> [ `Left | `Right ])
+  -> segment_of:('a -> [ `Left | `Right ]) @ local
   -> [ `Last_on_left | `First_on_right ]
   -> 'a option
 
@@ -556,7 +571,7 @@ val merge_to_sequence
 (** Convert a set to or from a map. [to_map] takes a function to produce data for each
     key. Both functions run in O(n) time (assuming the function passed to [to_map] runs in
     constant time). *)
-val to_map : ('key, 'cmp) t -> f:local_ ('key -> 'data) -> ('key, 'data, 'cmp) Base.Map.t
+val to_map : ('key, 'cmp) t -> f:('key -> 'data) @ local -> ('key, 'data, 'cmp) Base.Map.t
 
 val of_map_keys : ('key, _, 'cmp) Base.Map.t -> ('key, 'cmp) t
 
@@ -660,7 +675,8 @@ module%template.portable Make_binable (Elt : Elt_binable) :
   S_binable with type Elt.t = Elt.t
 
 module%template.portable
-  [@modality p] Make_plain_using_comparator (Elt : sig
+  [@modality p]
+  Make_plain_using_comparator (Elt : sig
     type t [@@deriving sexp_of]
 
     include Comparator.S [@modality p] with type t := t
@@ -674,7 +690,8 @@ module%template.portable
     [Make_binable_using_comparator] is similar, except the element and set types support
     [bin_io]. *)
 module%template.portable
-  [@modality p] Make_using_comparator (Elt : sig
+  [@modality p]
+  Make_using_comparator (Elt : sig
     type t [@@deriving sexp]
 
     include Comparator.S [@modality p] with type t := t
@@ -684,14 +701,16 @@ module%template.portable
 module Elt_bin_io = Elt_bin_io
 
 module%template.portable
-  [@modality p] Provide_bin_io
+  [@modality p]
+  Provide_bin_io
     (Elt : Elt_bin_io.S) : sig
     type t [@@deriving bin_io]
   end
   with type t := (Elt.t, Elt.comparator_witness) t
 
 module%template.portable
-  [@modality p] Make_binable_using_comparator (Elt : sig
+  [@modality p]
+  Make_binable_using_comparator (Elt : sig
     type t [@@deriving bin_io, sexp]
 
     include Comparator.S [@modality p] with type t := t
@@ -721,14 +740,18 @@ module%template.portable Provide_hash (Elt : sig
 include For_deriving with type ('a, 'b) t := ('a, 'b) t
 
 module%template.portable
-  [@modality p] Make_tree_plain (Elt : sig
+  [@modality p]
+  (Make_tree_plain
+  @@ nonportable) (Elt : sig
     type t [@@deriving sexp_of]
 
     include Comparator.S [@modality p] with type t := t
   end) : S_plain_tree with module Elt := Elt
 
 module%template.portable
-  [@modality p] Make_tree (Elt : sig
+  [@modality p]
+  (Make_tree
+  @@ nonportable) (Elt : sig
     type t [@@deriving sexp]
 
     include Comparator.S [@modality p] with type t := t
@@ -758,7 +781,8 @@ module Stable : sig
     include For_deriving_stable with type ('a, 'b) t := ('a, 'b) t
 
     module%template.portable
-      [@modality p] Make
+      [@modality p]
+      Make
         (Elt : Stable_module_types.S0
       [@modality p]) :
       S with type elt := Elt.t with type elt_comparator_witness := Elt.comparator_witness
@@ -771,7 +795,8 @@ module Stable : sig
       end
 
       module%template.portable
-        [@modality p] Make
+        [@modality p]
+        Make
           (Elt : Stable_module_types.With_stable_witness.S0
         [@modality p]) :
         S

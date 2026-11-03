@@ -31,16 +31,12 @@ val add_bigsubstring : t -> Bigstring.t @ local -> pos:int -> len:int -> unit
 
 (** [add_bin_prot b writer x] appends the bin-protted representation of [x] at the end of
     the buffer [b]. *)
-val add_bin_prot : t -> 'a Bin_prot.Type_class.writer -> 'a -> unit
-
-(** [add_bin_prot_local b ~bin_write ~bin_size x] appends the bin-protted representation
-    of local [x] at the end of the buffer [b]. *)
-val add_bin_prot_local
+val%template add_bin_prot
   :  t
-  -> bin_write:'a Bin_prot.Write.writer__local
-  -> bin_size:'a Bin_prot.Size.sizer__local
-  -> 'a @ local
+  -> ('a Bin_prot.Type_class.writer[@mode m]) @ local
+  -> 'a @ m
   -> unit
+[@@mode m = (global, local)]
 
 (** [add_string b s] appends the string [s] at the end of the buffer [b]. *)
 val add_string : t -> string @ local -> unit

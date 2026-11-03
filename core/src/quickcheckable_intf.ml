@@ -46,7 +46,8 @@ module type Quickcheckable = sig @@ portable
       (Conv : Conv with type quickcheckable := Quickcheckable.t) : S with type t := Conv.t
 
   module%template.portable
-    [@modality p] Of_quickcheckable1
+    [@modality p]
+    Of_quickcheckable1
       (Quickcheckable : S1
     [@modality p])
       (Conv : Conv1 with type 'a quickcheckable := 'a Quickcheckable.t) :
@@ -58,7 +59,8 @@ module type Quickcheckable = sig @@ portable
     S with type t := Conv.t
 
   module%template.portable
-    [@modality p] Of_quickcheckable_filtered1
+    [@modality p]
+    Of_quickcheckable_filtered1
       (Quickcheckable : S1
     [@modality p])
       (Conv : Conv_filtered1 with type 'a quickcheckable := 'a Quickcheckable.t) :

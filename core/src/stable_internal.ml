@@ -22,17 +22,12 @@ include (
       type nonrec float = float [@@deriving sexp ~stackify ~unboxed, sexp_grammar]]
 
     [%%rederive: type nonrec int = int [@@deriving sexp ~stackify, sexp_grammar]]
-
-    [%%rederive:
-      type nonrec int32 = int32 [@@deriving sexp ~stackify ~unboxed, sexp_grammar]]
-
-    [%%rederive:
-      type nonrec int64 = int64 [@@deriving sexp ~stackify ~unboxed, sexp_grammar]]
-
+    [%%rederive: type nonrec int32 = int32 [@@deriving sexp ~stackify, sexp_grammar]]
+    [%%rederive: type nonrec int64 = int64 [@@deriving sexp ~stackify, sexp_grammar]]
     [%%rederive: type nonrec 'a list = 'a list [@@deriving sexp ~stackify, sexp_grammar]]
 
     [%%rederive:
-      type nonrec nativeint = nativeint [@@deriving sexp ~stackify ~unboxed, sexp_grammar]]
+      type nonrec nativeint = nativeint [@@deriving sexp ~stackify, sexp_grammar]]
 
     [%%rederive:
       type nonrec 'a option = 'a option [@@deriving sexp ~stackify, sexp_grammar]]

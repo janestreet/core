@@ -8,7 +8,8 @@ module Stable = struct
     [@@@mode.default m = (global, local)]
 
     module%template.portable
-      [@modality p] V1
+      [@modality p]
+      V1
         (Binable : Minimal.S
       [@mode m])
         (M : Conv_without_uuid [@mode m] with type binable := Binable.t) :
@@ -20,7 +21,8 @@ module Stable = struct
     [@@alert "-legacy"]
 
     module%template.portable
-      [@modality p] V2
+      [@modality p]
+      V2
         (Binable : Minimal.S
       [@mode m])
         (M : Conv [@mode m] with type binable := Binable.t) :
@@ -36,7 +38,8 @@ module Stable = struct
     [@@@kind.default.explicit_plus_unmangled ka = (value, value_or_null, any)]
 
     module%template.portable
-      [@modality p] V1
+      [@modality p]
+      V1
         (Binable : Minimal.S1
       [@kind.explicit ka] [@mode m])
         (M : Conv1_without_uuid
@@ -51,7 +54,8 @@ module Stable = struct
     [@@alert "-legacy"]
 
     module%template.portable
-      [@modality p] V2
+      [@modality p]
+      V2
         (Binable : Minimal.S1
       [@kind.explicit ka] [@mode m])
         (M : Conv1
@@ -71,7 +75,8 @@ module Stable = struct
       ka = (value, value_or_null, any), kb = (value, any)]
 
     module%template.portable
-      [@modality p] V1
+      [@modality p]
+      V1
         (Binable : Minimal.S2
       [@kind.explicit ka kb] [@mode m])
         (M : Conv2_without_uuid
@@ -89,7 +94,8 @@ module Stable = struct
     [@@alert "-legacy"]
 
     module%template.portable
-      [@modality p] V2
+      [@modality p]
+      V2
         (Binable : Minimal.S2
       [@kind.explicit ka kb] [@mode m])
         (M : Conv2
@@ -110,7 +116,8 @@ module Stable = struct
       ka = (value, value_or_null, any), kb = (value, any), kc = (value, any)]
 
     module%template.portable
-      [@modality p] V1
+      [@modality p]
+      V1
         (Binable : Minimal.S3
       [@kind.explicit ka kb kc] [@mode m])
         (M : Conv3_without_uuid
@@ -130,7 +137,8 @@ module Stable = struct
     [@@alert "-legacy"]
 
     module%template.portable
-      [@modality p] V2
+      [@modality p]
+      V2
         (Binable : Minimal.S3
       [@kind.explicit ka kb kc] [@mode m])
         (M : Conv3
@@ -151,7 +159,8 @@ module Stable = struct
 
   module Of_sexpable = struct
     module%template.portable
-      [@modality p] V1 (M : sig
+      [@modality p]
+      V1 (M : sig
         type t : value_or_null
 
         include Sexpable.S with type t := t
@@ -188,15 +197,21 @@ module Stable = struct
   end
 
   module Of_stringable = struct
-    module%template.portable [@modality p] V1 (M : Stringable.S) =
-    Bin_prot.Utils.Make_binable_without_uuid [@modality p] (struct
+    [%%template
+    [@@@alloc a @ m = (heap_global, stack_local)]
+
+    module%template.portable [@mode m] [@modality p] V1 (M : Stringable.S [@alloc a]) =
+    Bin_prot.Utils.Make_binable_without_uuid [@mode m] [@modality p] (struct
         module Binable = struct
-          type t = string [@@deriving bin_io]
+          type t = string [@@deriving bin_io [@mode m]]
         end
 
         type t = M.t
 
-        let to_binable = M.to_string
+        [%%template
+        [@@@alloc a' @ m' = (heap_global, a @ m)]
+
+        let to_binable = (M.to_string [@alloc a']) [@@mode m']]
 
         (* Wrap exception for improved diagnostics. *)
         exception Of_binable of string * exn [@@deriving sexp]
@@ -206,17 +221,23 @@ module Stable = struct
           | x -> raise (Of_binable (s, x))
         ;;
       end)
-    [@@alert "-legacy"]
+    [@@alert "-legacy"]]
 
-    module%template.portable [@modality p] V2 (M : Conv_stringable) =
-    Bin_prot.Utils.Make_binable_with_uuid [@modality p] (struct
+    [%%template
+    [@@@alloc a @ m = (heap_global, stack_local)]
+
+    module%template.portable [@mode m] [@modality p] V2 (M : Conv_stringable [@mode m]) =
+    Bin_prot.Utils.Make_binable_with_uuid [@mode m] [@modality p] (struct
         module Binable = struct
-          type t = string [@@deriving bin_io]
+          type t = string [@@deriving bin_io [@mode m]]
         end
 
         type t = M.t
 
-        let to_binable = M.to_string
+        [%%template
+        [@@@alloc a' @ m' = (heap_global, a @ m)]
+
+        let to_binable = (M.to_string [@alloc a']) [@@mode m']]
 
         (* Wrap exception for improved diagnostics. *)
         exception Of_binable of string * exn [@@deriving sexp]
@@ -227,7 +248,7 @@ module Stable = struct
         ;;
 
         let caller_identity = M.caller_identity
-      end)
+      end)]
   end
 end
 
@@ -327,9 +348,41 @@ module Of_binable3_without_uuid =
 [@@@modality.default p = (portable, nonportable)]
 
 module Of_sexpable_with_uuid = Stable.Of_sexpable.V2 [@modality p]
-module Of_stringable_with_uuid = Stable.Of_stringable.V2 [@modality p]
+
+module [@mode m = (global, local)] Of_stringable_with_uuid =
+  Stable.Of_stringable.V2
+  [@mode m]
+  [@modality p]
+
 module Of_sexpable_without_uuid = Stable.Of_sexpable.V1 [@modality p]
-module Of_stringable_without_uuid = Stable.Of_stringable.V1 [@modality p]]
+
+module [@mode m = (global, local)] Of_stringable_without_uuid =
+  Stable.Of_stringable.V1
+  [@mode m]
+  [@modality p]]
+
+let m_of_type_class : type (a : any). a Bin_prot.Type_class.t -> a m =
+  fun ({ shape
+       ; writer = { size; write } as writer
+       ; reader = { read; vtag_read } as reader
+       } as type_class) ->
+  (module struct
+    type t = a
+
+    let bin_shape_t = shape
+    let bin_size_t = size
+    let bin_write_t = write
+    let bin_read_t = read
+    let __bin_read_t__ = vtag_read
+    let bin_writer_t = writer
+    let bin_reader_t = reader
+    let bin_t = type_class
+  end)
+;;
+
+let m_to_type_class : type (a : any). a m -> a Bin_prot.Type_class.t =
+  fun (module M) -> M.bin_t
+;;
 
 module%test _ = struct
   module type S_only_functions_and_shape = sig

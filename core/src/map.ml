@@ -248,6 +248,10 @@ end = struct
   let of_sequence_exn seq = Using_comparator.of_sequence_exn ~comparator seq
   let of_sequence_multi seq = Using_comparator.of_sequence_multi ~comparator seq
 
+  let of_sequence_multi_nonempty seq =
+    Using_comparator.of_sequence_multi_nonempty ~comparator seq
+  ;;
+
   let of_sequence_fold seq ~init ~f =
     Using_comparator.of_sequence_fold ~comparator seq ~init ~f
   ;;
@@ -270,6 +274,10 @@ end = struct
     Using_comparator.of_list_with_key_multi ~comparator list ~get_key
   ;;
 
+  let of_list_with_key_multi_nonempty list ~get_key =
+    Using_comparator.of_list_with_key_multi_nonempty ~comparator list ~get_key
+  ;;
+
   let of_list_with_key_fold list ~get_key ~init ~f =
     Using_comparator.of_list_with_key_fold ~comparator list ~get_key ~init ~f
   ;;
@@ -283,6 +291,10 @@ end = struct
   let of_alist_exn alist = Using_comparator.of_alist_exn ~comparator alist
   let of_hashtbl_exn hashtbl = Using_comparator.of_hashtbl_exn ~comparator hashtbl
   let of_alist_multi alist = Using_comparator.of_alist_multi ~comparator alist
+
+  let of_alist_multi_nonempty alist =
+    Using_comparator.of_alist_multi_nonempty ~comparator alist
+  ;;
 
   let of_alist_fold alist ~init ~f =
     Using_comparator.of_alist_fold ~comparator alist ~init ~f
@@ -321,6 +333,7 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
   let of_sequence_or_error s = of_sequence_or_error s ~comparator
   let of_sequence_exn s = of_sequence_exn s ~comparator
   let of_sequence_multi s = of_sequence_multi s ~comparator
+  let of_sequence_multi_nonempty s = of_sequence_multi_nonempty s ~comparator
   let of_sequence_fold s ~init ~f = of_sequence_fold s ~init ~f ~comparator
   let of_sequence_reduce s ~f = of_sequence_reduce s ~f ~comparator
   let of_alist a = of_alist a ~comparator
@@ -328,6 +341,7 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
   let of_alist_exn a = of_alist_exn a ~comparator
   let of_hashtbl_exn a = Using_comparator.tree_of_hashtbl_exn a ~comparator
   let of_alist_multi a = of_alist_multi a ~comparator
+  let of_alist_multi_nonempty a = of_alist_multi_nonempty a ~comparator
   let of_alist_fold a ~init ~f = of_alist_fold a ~init ~f ~comparator
   let of_alist_reduce a ~f = of_alist_reduce a ~f ~comparator
   let of_list_with_key l ~get_key = of_list_with_key l ~get_key ~comparator
@@ -338,6 +352,10 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
 
   let of_list_with_key_exn l ~get_key = of_list_with_key_exn l ~get_key ~comparator
   let of_list_with_key_multi l ~get_key = of_list_with_key_multi l ~get_key ~comparator
+
+  let of_list_with_key_multi_nonempty l ~get_key =
+    of_list_with_key_multi_nonempty l ~get_key ~comparator
+  ;;
 
   let of_list_with_key_fold l ~get_key ~init ~f =
     of_list_with_key_fold l ~get_key ~init ~f ~comparator
@@ -358,12 +376,17 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
   let add a ~key ~data = add a ~key ~data ~comparator
   let add_exn a ~key ~data = add_exn a ~key ~data ~comparator
   let add_multi a ~key ~data = add_multi a ~key ~data ~comparator
+  let add_multi_nonempty a ~key ~data = add_multi_nonempty a ~key ~data ~comparator
   let remove_multi a b = remove_multi a b ~comparator
+  let remove_multi_nonempty a b = remove_multi_nonempty a b ~comparator
   let find_multi a b = find_multi a b ~comparator
+  let find_multi_nonempty a b = find_multi_nonempty a b ~comparator
   let change a b ~f = change a b ~f ~comparator
   let change_or_null a b ~f = change_or_null a b ~f ~comparator
   let update a b ~f = update a b ~f ~comparator
+  let update_or_null a b ~f = update_or_null a b ~f ~comparator
   let update_and_return a b ~f = update_and_return a b ~f ~comparator
+  let change_and_return a b ~f = change_and_return a b ~f ~comparator
   let find_exn ~(here : [%call_pos]) a b = find_exn ~here a b ~comparator
   let find a b = find a b ~comparator
   let find_or_null a b = find_or_null a b ~comparator
@@ -477,7 +500,8 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
   ;;
 
   module%template.portable
-    [@modality p] Make_applicative_traversals
+    [@modality p]
+    Make_applicative_traversals
       (A : Applicative.Lazy_applicative) =
   struct
     module Traversals = Make_applicative_traversals [@modality p] (A)
@@ -496,7 +520,8 @@ module%template.portable Make_tree_S1 (Key : Comparator.S1) = struct
 end
 
 module%template.portable
-  [@modality p] Make_tree_plain (Key : sig
+  [@modality p]
+  Make_tree_plain (Key : sig
     type t [@@deriving sexp_of]
 
     include Comparator.S with type t := t
@@ -522,7 +547,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_tree (Key : sig
+  [@modality p]
+  Make_tree (Key : sig
     type t [@@deriving sexp]
 
     include Comparator.S with type t := t
@@ -681,6 +707,11 @@ struct
   let[@mode local] bin_write_t f buf ~pos t =
     bin_write_t f buf ~pos (Base.Map.globalize0 t)
   ;;
+
+  let[@mode local] bin_writer_t : (_ Bin_prot.Type_class.S1.writer[@mode local]) =
+    fun { size; write } ->
+    { size = (bin_size_t [@mode local]) size; write = (bin_write_t [@mode local]) write }
+  ;;
 end
 
 module%template Provide_stable_witness (Key : sig
@@ -699,7 +730,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_plain_using_comparator (Key : sig
+  [@modality p]
+  Make_plain_using_comparator (Key : sig
     type t [@@deriving sexp_of]
 
     include Comparator.S [@modality p] with type t := t
@@ -764,7 +796,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_using_comparator (Key_sexp : sig
+  [@modality p]
+  Make_using_comparator (Key_sexp : sig
     type t [@@deriving sexp]
 
     include Comparator.S [@modality p] with type t := t
@@ -790,7 +823,8 @@ Make_using_comparator [@modality p] (struct
   end)
 
 module%template.portable
-  [@modality p] Make_binable_using_comparator (Key_bin_sexp : sig
+  [@modality p]
+  Make_binable_using_comparator (Key_bin_sexp : sig
     type t [@@deriving bin_io, sexp]
 
     include Comparator.S [@modality p] with type t := t
@@ -846,26 +880,27 @@ module For_deriving = struct
       M.__bin_read_t__
     ;;
 
-    type%template binio =
-      { bin_shape_m__t : 'a 'c. ('a, 'c) Key_bin_io.t -> Bin_shape.t -> Bin_shape.t
-      ; bin_size_m__t :
-          'a 'b 'c. ('a, 'c) Key_bin_io.t -> ('b, ('a, 'b, 'c) t) Bin_prot.Size.sizer1
-      ; bin_size_m__t__local :
-          'a 'b 'c.
-          ('a, 'c) Key_bin_io.t
-          -> (('b, ('a, 'b, 'c) t) Bin_prot.Size.sizer1[@mode local])
-      ; bin_write_m__t :
-          'a 'b 'c. ('a, 'c) Key_bin_io.t -> ('b, ('a, 'b, 'c) t) Bin_prot.Write.writer1
-      ; bin_write_m__t__local :
-          'a 'b 'c.
-          ('a, 'c) Key_bin_io.t
-          -> (('b, ('a, 'b, 'c) t) Bin_prot.Write.writer1[@mode local])
-      ; bin_read_m__t :
-          'a 'b 'c. ('a, 'c) Key_bin_io.t -> ('b, ('a, 'b, 'c) t) Bin_prot.Read.reader1
-      ; __bin_read_m__t__ :
-          'a 'b 'c.
-          ('a, 'c) Key_bin_io.t -> ('b, ('a, 'b, 'c) t) Bin_prot.Read.vtag_reader1
-      }
+    [%%template
+      type binio =
+        { bin_shape_m__t : 'a 'c. ('a, 'c) Key_bin_io.t -> Bin_shape.t -> Bin_shape.t
+        ; bin_size_m__t :
+            'a 'b 'c. ('a, 'c) Key_bin_io.t -> ('b, ('a, 'b, 'c) t) Bin_prot.Size.sizer1
+        ; bin_size_m__t__local :
+            'a 'b 'c.
+            ('a, 'c) Key_bin_io.t
+            -> (('b, ('a, 'b, 'c) t) Bin_prot.Size.sizer1[@mode local])
+        ; bin_write_m__t :
+            'a 'b 'c. ('a, 'c) Key_bin_io.t -> ('b, ('a, 'b, 'c) t) Bin_prot.Write.writer1
+        ; bin_write_m__t__local :
+            'a 'b 'c.
+            ('a, 'c) Key_bin_io.t
+            -> (('b, ('a, 'b, 'c) t) Bin_prot.Write.writer1[@mode local])
+        ; bin_read_m__t :
+            'a 'b 'c. ('a, 'c) Key_bin_io.t -> ('b, ('a, 'b, 'c) t) Bin_prot.Read.reader1
+        ; __bin_read_m__t__ :
+            'a 'b 'c.
+            ('a, 'c) Key_bin_io.t -> ('b, ('a, 'b, 'c) t) Bin_prot.Read.vtag_reader1
+        }]
 
     let binio =
       { bin_shape_m__t
@@ -1015,7 +1050,8 @@ module Stable = struct
     include For_deriving_stable
 
     module%template.portable
-      [@modality p] Make
+      [@modality p]
+      Make
         (Key : Stable_module_types.S0
       [@modality p]) =
       Make_binable_using_comparator [@modality p] (Key)
@@ -1028,7 +1064,8 @@ module Stable = struct
       end
 
       module%template.portable
-        [@modality p] Make
+        [@modality p]
+        Make
           (Key_stable : Stable_module_types.With_stable_witness.S0
         [@modality p]) =
       struct

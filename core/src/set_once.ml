@@ -149,3 +149,98 @@ include%template
       let to_quickcheckable { value; set_at = _ } = value
       let of_quickcheckable value = { value; set_at = [%here] }
     end)
+
+module Atomic = struct
+  type 'a inner =
+    { value : 'a option
+        (* we still store an option here to avoid allocating in the [get] case. *)
+    ; set_at : Source_code_position.Stable.V1.t
+    }
+  [@@deriving sexp_of]
+
+  type 'a t = 'a inner or_null Atomic.t
+
+  let invariant (type a : value mod contended) (invariant_a : a -> unit) t =
+    match Atomic.get t with
+    | Null -> ()
+    | This { value; set_at = _ } ->
+      (match value with
+       | None ->
+         raise_s
+           [%message
+             "invariant failed"
+               "Core.Set_once.Atomic: [t] is [This] but [value] is [None]"]
+       | Some value -> invariant_a value)
+  ;;
+
+  let sexp_of_t (type a : value mod contended) (sexp_of_a : a -> Sexp.t) t =
+    match Atomic.get t with
+    | Null -> [%message "unset"]
+    | This { value = Some value; set_at } ->
+      if Source_code_position.is_dummy set_at
+      then [%message "" (value : a)]
+      else [%message "" (value : a) ~set_at:(set_at |> Source_code_position.to_string)]
+    | This { value = None; _ } -> assert false
+  ;;
+
+  let create () = Atomic.make Null
+
+  let create_full ~(here : [%call_pos]) value =
+    Atomic.make (This { value = Some value; set_at = here })
+  ;;
+
+  let set_internal t ~here value =
+    let inner = { value = Some value; set_at = here } in
+    Atomic.compare_and_set t ~if_phys_equal_to:Null ~replace_with:(This inner)
+  ;;
+
+  let set_if_none t ~(here : [%call_pos]) value =
+    match set_internal t ~here value with
+    | Compare_failed | Set_here -> ()
+  ;;
+
+  let set t ~(here : [%call_pos]) value =
+    match set_internal t ~here value with
+    | Set_here -> Ok ()
+    | Compare_failed ->
+      let inner =
+        match Atomic.get t with
+        | Null -> assert false
+        | This inner -> inner
+      in
+      Or_error.error_s
+        [%message
+          "[Set_once.Atomic.set_exn] already set"
+            ~setting_at:(here : Source_code_position.t)
+            ~previously_set_at:(inner.set_at : Source_code_position.t)]
+  ;;
+
+  let set_exn t ~(here : [%call_pos]) value = Or_error.ok_exn (set t ~here value)
+
+  let get t =
+    match Atomic.get t with
+    | Null -> None
+    | This inner -> inner.value
+  ;;
+
+  let get_exn ~(here : [%call_pos]) t =
+    match get t with
+    | Some value -> value
+    | None ->
+      raise_s
+        (if Source_code_position.is_dummy here
+         then [%message "[Set_once.Atomic.get_exn] unset"]
+         else
+           [%message
+             "[Set_once.Atomic.get_exn] unset" ~at:(here : Source_code_position.t)])
+  ;;
+
+  let is_none t = Option.is_none (get t)
+  let is_some t = Option.is_some (get t)
+
+  let iter t ~f =
+    match get t with
+    | None -> ()
+    | Some value -> f value
+  ;;
+end

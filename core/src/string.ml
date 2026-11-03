@@ -102,6 +102,26 @@ module Caseless = struct
     Comparable.Make_binable_using_comparator [@mode local] [@modality portable] (T)
 
   include%template Hashable.Make_binable [@modality portable] (T)
+
+  module Stable = struct
+    module V1 = struct
+      module T = struct
+        include Caseless
+
+        type t = string [@@deriving bin_io ~localize, stable_witness]
+      end
+
+      include T
+
+      let%template[@alloc __ = (stack, heap)] to_string = Fn.id
+      let of_string = Fn.id
+
+      include%template
+        Comparable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
+
+      include%template Hashable.Stable.V1.With_stable_witness.Make [@modality portable] (T)
+    end
+  end
 end
 
 type t = string [@@deriving bin_io ~localize, typerep]

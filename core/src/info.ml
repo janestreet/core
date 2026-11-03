@@ -66,7 +66,7 @@ end
 
 module Extend (Info : Base.Info.S) = struct
   include Info
-  module Utf8 = Base.Info.Utf8
+  module Utf8 : module type of Base.Info.Utf8 = Base.Info.Utf8
 
   (* Note that implementations of Base.Info.S should have t_of_sexp that handles any sexp. *)
   let%template quickcheck_generator =
@@ -123,10 +123,7 @@ module Extend (Info : Base.Info.S) = struct
 
     include Stable.V2
 
-    let%template to_info = (Info.Internal_repr.to_info [@mode p])
-    [@@mode p = (portable, nonportable)]
-    ;;
-
+    let to_info = Info.Internal_repr.to_info
     let of_info = Info.Internal_repr.of_info
   end
 
@@ -301,25 +298,27 @@ module Extend (Info : Base.Info.S) = struct
           | With_backtrace (t, bt) -> With_backtrace (repr_of_binable t, bt)
         ;;
 
-        let%template rec repr_to_binable : Info.Internal_repr.t @ m -> Protocol.t @ m =
-          fun repr ->
-          let repr_to_binable = repr_to_binable [@alloc a] in
-          match[@exclave_if_stack a] repr with
-          | Could_not_construct x -> Could_not_construct x
-          | String x -> String x
-          | Exn x ->
-            let f = Modes.Global.unwrap x in
-            Exn (Exn.sexp_of_t f)
-          | Sexp x -> Sexp x
-          | Tag_sexp (tag, x, pos) -> Tag_sexp (tag, x, pos)
-          | Tag_t (tag, t) -> Tag_t (tag, repr_to_binable t)
-          | Tag_arg (message, tag, t) -> Tag_arg (message, tag, repr_to_binable t)
-          | Of_list (n, xs) ->
-            Of_list
-              ( n
-              , (List.map [@mode m] [@alloc a]) xs ~f:(fun repr ->
-                  repr_to_binable repr [@exclave_if_local m]) )
-          | With_backtrace (t, bt) -> With_backtrace (repr_to_binable t, bt)
+        let%template repr_to_binable =
+          let rec repr_to_binable : Info.Internal_repr.t @ m -> Protocol.t @ m =
+            fun repr ->
+            match[@exclave_if_stack a] repr with
+            | Could_not_construct x -> Could_not_construct x
+            | String x -> String x
+            | Exn x ->
+              let f = Modes.Global.unwrap x in
+              Exn (Exn.sexp_of_t f)
+            | Sexp x -> Sexp x
+            | Tag_sexp (tag, x, pos) -> Tag_sexp (tag, x, pos)
+            | Tag_t (tag, t) -> Tag_t (tag, repr_to_binable t)
+            | Tag_arg (message, tag, t) -> Tag_arg (message, tag, repr_to_binable t)
+            | Of_list (n, xs) ->
+              Of_list
+                ( n
+                , (List.map [@mode m] [@alloc a]) xs ~f:(fun repr ->
+                    repr_to_binable repr [@exclave_if_local m]) )
+            | With_backtrace (t, bt) -> With_backtrace (repr_to_binable t, bt)
+          in
+          repr_to_binable
         [@@alloc a @ m = (stack_local, heap_global)]
         ;;
 
@@ -329,10 +328,8 @@ module Extend (Info : Base.Info.S) = struct
         [@@alloc a @ m = (stack_local, heap_global)]
         ;;
 
-        let%template of_binable binable =
-          repr_of_binable binable
-          |> (Info.Internal_repr.to_info [@mode portable])
-          |> Modes.Portable.wrap
+        let of_binable binable =
+          repr_of_binable binable |> Info.Internal_repr.to_info |> Modes.Portable.wrap
         ;;
 
         (* The mli claims that this is wire-compatible with [Info.Stable.V2.t]. A test

@@ -43,7 +43,7 @@ module type Date0 = sig @@ portable
       Note: This function parses exactly 8 characters starting at [pos] and does not
       validate that the substring is exactly 8 characters long. Trailing characters after
       position [pos + 8] are silently ignored. *)
-  val of_string_iso8601_basic : string -> pos:int -> t
+  val of_string_iso8601_basic : string @ local -> pos:int -> t
 
   [%%template:
   [@@@alloc.default a @ m = (heap_global, stack_local)]

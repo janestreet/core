@@ -107,8 +107,10 @@ let[@inline] lazy_booltest (type a : k) (f : a -> bool) ~if_false =
     if f v then get_pass () else fail (Lazy.force if_false))
 ;;
 
-let[@inline] booltest f ~if_false =
-  (lazy_booltest [@kind k]) f ~if_false:(Lazy.from_val if_false)
+let[@inline] booltest (type a : k) (f : (a -> bool) @ p) ~if_false =
+  (protect [@kind k] [@mode p p]) (fun (v : a) ->
+    if f v then get_pass () else fail if_false)
+[@@mode p = (portable, nonportable)]
 ;;]
 
 let%template try_with (f @ p) =
@@ -220,6 +222,13 @@ let%template first_failure (t1 @ p) (t2 @ p) = if List.is_empty t1 then t2 else 
 let of_error_opt = function
   | None -> get_pass ()
   | Some error -> fail error
+;;
+
+let%template of_or_error (t @ p) =
+  match t with
+  | Ok () -> get_pass ()
+  | Error error -> [ { path = []; error } ]
+[@@mode p = (portable, nonportable)]
 ;;
 
 let bounded ~name ~lower ~upper ~compare x =

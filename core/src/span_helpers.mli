@@ -4,7 +4,7 @@ open! Import
 
 val randomize
   :  'span
-  -> Random.State.t
+  -> Random.State.t @ local
   -> percent:Percent.t
   -> scale:('span -> float -> 'span)
   -> 'span

@@ -175,6 +175,14 @@ end = struct
   let bin_write_t__local _ _ ~pos:_ _ =
     failwithf "Unexpectedly called [%s.bin_write_t__local]" Name.name ()
   ;;
+
+  let bin_writer_t__local (bin_writer : 'a Bin_prot.Type_class.writer__local)
+    : 'a t Bin_prot.Type_class.writer__local
+    =
+    { size = bin_size_t__local bin_writer.size
+    ; write = bin_write_t__local bin_writer.write
+    }
+  ;;
 end
 
 module Only_used_as_phantom_type0 (T : sig

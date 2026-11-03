@@ -10,7 +10,10 @@ include Make_substring_intf
 type bigstring = Bigstring.t
 
 module Blit = struct
-  type ('src, 'dst) t = ('src, 'dst) Blit.blito
+  [%%template
+  [@@@mode.default v = (read_write, read)]
+
+  type ('src, 'dst) t = (('src, 'dst) Blit.blito[@mode v])]
 
   let string_bytes ~src ?src_pos ?src_len ~dst ?(dst_pos = 0) () =
     let src_pos, len =
@@ -56,7 +59,12 @@ module%template.portable [@modality p] F (Underlying : Base) :
        ;;
      ]} *)
 
-  let base t = t.base
+  [%%template
+  [@@@mode.default l = (global, local)]
+  [@@@mode.default v = (read_write, read)]
+
+  let base t = t.base]
+
   let pos t = t.pos
   let length t = t.len
   let is_empty t = Int.equal t.len 0
@@ -75,16 +83,29 @@ module%template.portable [@modality p] F (Underlying : Base) :
     buf
   ;;
 
+  [%%template
+  [@@@alloc.default a @ l = (heap_global, stack_local)]
+  [@@@mode.default v = (read_write, read)]
+
   let create ?pos ?len base =
-    let pos, len =
-      Ordered_collection_common.get_pos_len_exn
-        ()
-        ?pos
-        ?len
-        ~total_length:(Underlying.length base)
-    in
-    { base; pos; len }
+    (let pos, len =
+       Ordered_collection_common.get_pos_len_exn
+         ()
+         ?pos
+         ?len
+         ~total_length:(Underlying.length base)
+     in
+     { base; pos; len })
+    [@exclave_if_stack a]
   ;;
+
+  let sub ?pos ?len t =
+    (let pos, len =
+       Ordered_collection_common.get_pos_len_exn () ?pos ?len ~total_length:(length t)
+     in
+     { base = t.base; pos = t.pos + pos; len })
+    [@exclave_if_stack a]
+  ;;]
 
   let quickcheck_generator =
     let open Base_quickcheck.Generator.Let_syntax [@mode p] in
@@ -96,7 +117,7 @@ module%template.portable [@modality p] F (Underlying : Base) :
     return (create ~pos ~len base)
   ;;
 
-  let get_no_bounds_check t i = Underlying.get (base t) (pos t + i)
+  let get_no_bounds_check t i = Underlying.get t.base (t.pos + i)
 
   let get t i =
     if i >= 0 && i < length t
@@ -104,17 +125,10 @@ module%template.portable [@modality p] F (Underlying : Base) :
     else raise (Invalid_argument "index out of bounds")
   ;;
 
-  let sub ?pos ?len t =
-    let pos, len =
-      Ordered_collection_common.get_pos_len_exn () ?pos ?len ~total_length:(length t)
-    in
-    { base = t.base; pos = t.pos + pos; len }
-  ;;
-
   module Make_arg = struct
     type nonrec t = t
 
-    module Elt = Char
+    module Elt : module type of Char = Char
 
     let fold t ~init ~f =
       let rec go acc i = if i >= length t then acc else go (f acc (get t i)) (i + 1) in
@@ -164,7 +178,7 @@ module%template.portable [@modality p] F (Underlying : Base) :
   let iter_until = C.iter_until
 
   (* [C.to_list] has to construct then reverse the list *)
-  let to_list t = List.init (length t) ~f:(get t)
+  let to_list t = List.init (length t) ~f:(fun i -> get t i)
   let to_array = C.to_array
   let find_map = C.find_map
   let find = C.find
@@ -185,38 +199,66 @@ module%template.portable [@modality p] F (Underlying : Base) :
   let findi = C.findi
   let find_mapi = C.find_mapi
 
+  [%%template
+  [@@@alloc.default a @ l = (heap_global, stack_local)]
+  [@@@mode.default v = (read_write, read)]
+
   let wrap_sub_n t n ~name ~pos ~len ~on_error =
-    if n < 0
-    then invalid_arg (name ^ " expecting nonnegative argument")
-    else (
-      try sub t ~pos ~len with
-      | _ -> on_error)
+    (if n < 0
+     then invalid_arg (name ^ " expecting nonnegative argument")
+     else (
+       try (sub [@alloc a] [@mode v]) t ~pos ~len with
+       | _ -> on_error))
+    [@exclave_if_stack a]
   ;;
 
   let drop_prefix t n =
-    wrap_sub_n
+    (wrap_sub_n [@alloc a] [@mode v])
       ~name:"drop_prefix"
       t
       n
       ~pos:n
       ~len:(length t - n)
-      ~on_error:{ t with len = 0 }
+      ~on_error:{ t with len = 0 } [@exclave_if_stack a]
   ;;
 
   let drop_suffix t n =
-    wrap_sub_n
+    (wrap_sub_n [@alloc a] [@mode v])
       ~name:"drop_suffix"
       t
       n
       ~pos:0
       ~len:(length t - n)
-      ~on_error:{ t with len = 0 }
+      ~on_error:{ t with len = 0 } [@exclave_if_stack a]
   ;;
 
-  let prefix t n = wrap_sub_n ~name:"prefix" t n ~pos:0 ~len:n ~on_error:t
-  let suffix t n = wrap_sub_n ~name:"suffix" t n ~pos:(length t - n) ~len:n ~on_error:t
+  let prefix t n =
+    (wrap_sub_n [@alloc a] [@mode v])
+      ~name:"prefix"
+      t
+      n
+      ~pos:0
+      ~len:n
+      ~on_error:t [@exclave_if_stack a]
+  ;;
 
-  let blit_to (type a) (blit : (Underlying.t, a) Blit.t) t ~dst ~dst_pos =
+  let suffix t n =
+    (wrap_sub_n [@alloc a] [@mode v])
+      ~name:"suffix"
+      t
+      n
+      ~pos:(length t - n)
+      ~len:n
+      ~on_error:t [@exclave_if_stack a]
+  ;;]
+
+  let%template blit_to
+    (type a)
+    (blit : ((Underlying.t, a) Blit.t[@mode read]))
+    t
+    ~dst
+    ~dst_pos
+    =
     blit ~src:t.base ~src_pos:t.pos ~src_len:t.len ~dst ~dst_pos ()
   ;;
 
@@ -243,18 +285,31 @@ module%template.portable [@modality p] F (Underlying : Base) :
   let of_string x = of_base (base_of_string x)
   let of_bigstring x = of_base (base_of_bigstring x)
 
-  let make (type a) create (blit : (base, a) Blit.t) t =
-    let dst = create t.len in
-    blit ~src:t.base ~src_pos:t.pos ~src_len:t.len ~dst ~dst_pos:0 ();
+  let%template[@alloc a @ l = (heap_global, stack_local)] to_string t =
+    (let dst = (Bytes.create [@alloc a]) t.len in
+     Underlying.blit_to_bytes
+       ~src:t.base
+       ~src_pos:t.pos
+       ~src_len:t.len
+       ~dst:(borrow_ dst)
+       ~dst_pos:0
+       ();
+     Bytes.unique_to_string dst)
+    [@exclave_if_stack a]
+  ;;
+
+  let to_bigstring t =
+    let dst = Bigstring.create t.len in
+    Underlying.blit_to_bigstring
+      ~src:t.base
+      ~src_pos:t.pos
+      ~src_len:t.len
+      ~dst
+      ~dst_pos:0
+      ();
     dst
   ;;
 
-  let to_string x =
-    Bytes.unsafe_to_string
-      ~no_mutation_while_string_reachable:(make Bytes.create Underlying.blit_to_bytes x)
-  ;;
-
-  let to_bigstring = make Bigstring.create Underlying.blit_to_bigstring
   let sexp_of_t x = Sexp.Atom (to_string x)
 
   let concat_gen create_dst blit_dst ts =

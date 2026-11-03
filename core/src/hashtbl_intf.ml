@@ -193,6 +193,15 @@ module type For_deriving = sig
     -> ('k, 'v) t Bin_prot.Read.vtag_reader
 end
 
+module type For_deriving_stable = sig
+  include For_deriving
+
+  val stable_witness_m__t
+    :  (module Stable_witness.S with type t = 'k)
+    -> 'v Stable_witness.t
+    -> ('k, 'v) t Stable_witness.t
+end
+
 module type S_plain = sig
   type key
   type ('a, 'b) hashtbl
@@ -233,7 +242,8 @@ module type S_stable = sig
 end
 
 module type%template
-  [@modality p = (portable, nonportable)] Hashtbl_over_values = sig
+  [@modality p = (portable, nonportable)]
+  Hashtbl_over_values = sig
   @@ p
   include Hashtbl.S_without_submodules [@mode p] (** @inline *)
 
@@ -272,7 +282,8 @@ module type%template
   module type S_stable = S_stable with type ('a, 'b) hashtbl = ('a, 'b) t
 
   module%template
-    [@modality p = (p, nonportable)] Make_plain (Key : sig
+    [@modality p = (p, nonportable)]
+    Make_plain (Key : sig
     @@ p
       type t
 
@@ -283,7 +294,8 @@ module type%template
   end
 
   module%template
-    [@modality p = (p, nonportable)] Make (Key : sig
+    [@modality p = (p, nonportable)]
+    Make (Key : sig
     @@ p
       include Key
     end) : sig
@@ -292,7 +304,8 @@ module type%template
   end
 
   module%template
-    [@modality p = (p, nonportable)] Make_binable (Key : sig
+    [@modality p = (p, nonportable)]
+    Make_binable (Key : sig
     @@ p
       include Key_binable
     end) : sig
@@ -301,7 +314,8 @@ module type%template
   end
 
   module%template
-    [@modality p = (p, nonportable)] Make_stable (Key : sig
+    [@modality p = (p, nonportable)]
+    Make_stable (Key : sig
     @@ p
       include Key_stable
     end) : sig
@@ -310,7 +324,8 @@ module type%template
   end
 
   module%template
-    [@modality p = (p, nonportable)] Make_plain_with_hashable (T : sig
+    [@modality p = (p, nonportable)]
+    Make_plain_with_hashable (T : sig
     @@ p
       module Key : sig
         type t
@@ -325,7 +340,8 @@ module type%template
   end
 
   module%template
-    [@modality p = (p, nonportable)] Make_with_hashable (T : sig
+    [@modality p = (p, nonportable)]
+    Make_with_hashable (T : sig
     @@ p
       module Key : Key
 
@@ -336,7 +352,8 @@ module type%template
   end
 
   module%template
-    [@modality p = (p, nonportable)] Make_binable_with_hashable (T : sig
+    [@modality p = (p, nonportable)]
+    Make_binable_with_hashable (T : sig
     @@ p
       module Key : Key_binable
 
@@ -347,7 +364,8 @@ module type%template
   end
 
   module%template
-    [@modality p = (p, nonportable)] Make_stable_with_hashable (T : sig
+    [@modality p = (p, nonportable)]
+    Make_stable_with_hashable (T : sig
     @@ p
       module Key : Key_stable
 
@@ -358,7 +376,8 @@ module type%template
   end
 
   module%template
-    [@modality p = (p, nonportable)] Provide_of_sexp (Key : sig
+    [@modality p = (p, nonportable)]
+    Provide_of_sexp (Key : sig
     @@ p
       include Base.Hashtbl.M_of_sexp
     end) : sig @@ p
@@ -367,7 +386,8 @@ module type%template
     with type 'a t := (Key.t, 'a) t
 
   module%template
-    [@modality p = (p, nonportable)] Provide_bin_io (Key : sig
+    [@modality p = (p, nonportable)]
+    Provide_bin_io (Key : sig
     @@ p
       type t [@@deriving bin_io]
 
@@ -387,8 +407,22 @@ module type%template
   val hashable : ('key, _) t -> 'key Hashable.t
 
   module type For_deriving = For_deriving
+  module type For_deriving_stable = For_deriving_stable
 
   include For_deriving with type ('a, 'b) t := ('a, 'b) t
+
+  module Stable : sig
+    module V1 : sig
+      type nonrec ('key, 'data) t = ('key, 'data) t
+      [@@deriving bin_io, sexp, stable_witness]
+
+      module M (K : T.T) : sig
+        type nonrec 'data t = (K.t, 'data) t
+      end
+
+      include For_deriving_stable with type ('key, 'data) t := ('key, 'data) t
+    end
+  end
 end
 
 module type%template [@modality p = (portable, nonportable)] Hashtbl = sig @@ p

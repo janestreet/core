@@ -40,7 +40,41 @@ module Stable = struct
     end
   end
 
+  module Help_category = struct
+    module V1 = struct
+      include Command.Shape.Stable.Help_category.V1
+
+      type t = Command.Shape.Stable.Help_category.V1.t =
+        { abbrev : string
+        ; name : string
+        }
+      [@@deriving bin_io ~localize]
+
+      let%expect_test _ =
+        print_endline [%bin_digest: t];
+        [%expect {| 2397386cf666e67651459af685455be9 |}]
+      ;;
+    end
+  end
+
   module Flag_info = struct
+    module V2 = struct
+      include Command.Shape.Stable.Flag_info.V2
+
+      type t = Command.Shape.Stable.Flag_info.V2.t =
+        { name : string
+        ; doc : string
+        ; aliases : string list
+        ; help_category : Help_category.V1.t option
+        }
+      [@@deriving bin_io ~localize]
+
+      let%expect_test _ =
+        print_endline [%bin_digest: t];
+        [%expect {| 318d32a8b61c8989827d1a139e94155f |}]
+      ;;
+    end
+
     module V1 = struct
       include Command.Shape.Stable.Flag_info.V1
 
@@ -59,6 +93,23 @@ module Stable = struct
   end
 
   module Base_info = struct
+    module V3 = struct
+      include Command.Shape.Stable.Base_info.V3
+
+      type t = Command.Shape.Stable.Base_info.V3.t =
+        { summary : string
+        ; readme : string option
+        ; anons : Anons.V2.t
+        ; flags : Flag_info.V2.t list
+        }
+      [@@deriving bin_io ~localize]
+
+      let%expect_test _ =
+        print_endline [%bin_digest: t];
+        [%expect {| 741b91301d2235f32c77c26f7ee1dc0f |}]
+      ;;
+    end
+
     module V2 = struct
       include Command.Shape.Stable.Base_info.V2
 
@@ -119,10 +170,25 @@ module Stable = struct
   end
 
   module Fully_forced = struct
-    module V1 = struct
-      include Command.Shape.Stable.Fully_forced.V1
+    module V2 = struct
+      include Command.Shape.Stable.Fully_forced.V2
 
-      type t = Command.Shape.Stable.Fully_forced.V1.t =
+      type t = Command.Shape.Stable.Fully_forced.V2.t =
+        | Basic of Base_info.V3.t
+        | Group of t Group_info.V2.t
+        | Exec of Exec_info.V3.t * t
+      [@@deriving bin_io ~localize]
+
+      let%expect_test _ =
+        print_endline [%bin_digest: t];
+        [%expect {| 65eb539e4ca086abaefc5dfe81d3af6f |}]
+      ;;
+    end
+
+    module V1 = struct
+      include Command.Shape.Stable.Fully_forced.V1 [@alert "-deprecated"]
+
+      type t = (Command.Shape.Stable.Fully_forced.V1.t[@alert "-deprecated"]) =
         | Basic of Base_info.V2.t
         | Group of t Group_info.V2.t
         | Exec of Exec_info.V3.t * t

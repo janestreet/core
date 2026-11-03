@@ -46,6 +46,7 @@ val comma_separated_argtype
   :  ?key:'a t Univ_map.Multi.Key.t
   -> ?strip_whitespace:bool
   -> ?unique_values:bool
+  -> ?propagate_additional_documentation:bool
   -> 'a Command.Param.Arg_type.t
   -> 'a t Command.Param.Arg_type.t
   @@ nonportable
@@ -109,7 +110,7 @@ module Stable : sig
 
     type nonrec 'a t = 'a t
     [@@deriving
-      bin_io
+      bin_io ~localize
       , compare ~localize
       , equal ~localize
       , globalize

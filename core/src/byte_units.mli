@@ -19,7 +19,7 @@ open! Import
 
 type t : immediate64 [@@deriving sexp_of, typerep]
 
-include%template Comparable.S_plain [@mode local] with type t := t
+include%template Comparable.S_plain [@mode local] [@modality portable] with type t := t
 
 include Hashable.S_plain with type t := t
 include Stringable.S with type t := t

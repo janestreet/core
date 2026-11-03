@@ -3,7 +3,8 @@ open Std_internal
 include String_id_intf
 
 module%template.portable
-  [@modality p] Make
+  [@modality p]
+  Make
     (M : sig
        val module_name : string
        val validate : string -> unit Or_error.t @@ p

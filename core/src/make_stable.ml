@@ -7,7 +7,8 @@ module%template Of_stable_format = struct
   [@@@mode.default m = (global, local)]
 
   module%template.portable
-    [@modality p] V1
+    [@modality p]
+    V1
       (Stable_format : sig
          type t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -41,7 +42,8 @@ module%template Of_stable_format = struct
   end
 
   module%template.portable
-    [@modality p] V2
+    [@modality p]
+    V2
       (Stable_format : sig
          type t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -76,7 +78,8 @@ module%template Of_stable_format1 = struct
   [@@@mode.default m = (global, local)]
 
   module%template.portable
-    [@modality p] V1
+    [@modality p]
+    V1
       (Stable_format : sig
          type 'a t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -109,7 +112,8 @@ module%template Of_stable_format1 = struct
   end
 
   module%template.portable
-    [@modality p] V2
+    [@modality p]
+    V2
       (Stable_format : sig
          type 'a t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -143,7 +147,8 @@ module%template Of_stable_format2 = struct
   [@@@mode.default m = (global, local)]
 
   module%template.portable
-    [@modality p] V1
+    [@modality p]
+    V1
       (Stable_format : sig
          type ('a1, 'a2) t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -176,7 +181,8 @@ module%template Of_stable_format2 = struct
   end
 
   module%template.portable
-    [@modality p] V2
+    [@modality p]
+    V2
       (Stable_format : sig
          type ('a1, 'a2) t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -210,7 +216,8 @@ module%template Of_stable_format3 = struct
   [@@@mode.default m = (global, local)]
 
   module%template.portable
-    [@modality p] V1
+    [@modality p]
+    V1
       (Stable_format : sig
          type ('a1, 'a2, 'a3) t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -250,7 +257,8 @@ module%template Of_stable_format3 = struct
   end
 
   module%template.portable
-    [@modality p] V2
+    [@modality p]
+    V2
       (Stable_format : sig
          type ('a1, 'a2, 'a3) t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -292,7 +300,8 @@ module With_stable_witness = struct
     [@@@mode.default m = (global, local)]
 
     module%template.portable
-      [@modality p] V1
+      [@modality p]
+      V1
         (Stable_format : sig
            type t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -313,7 +322,8 @@ module With_stable_witness = struct
     end
 
     module%template.portable
-      [@modality p] V2
+      [@modality p]
+      V2
         (Stable_format : sig
            type t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -339,7 +349,8 @@ module With_stable_witness = struct
     [@@@mode.default m = (global, local)]
 
     module%template.portable
-      [@modality p] V1
+      [@modality p]
+      V1
         (Stable_format : sig
            type 'a t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -367,7 +378,8 @@ module With_stable_witness = struct
     end
 
     module%template.portable
-      [@modality p] V2
+      [@modality p]
+      V2
         (Stable_format : sig
            type 'a t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -400,7 +412,8 @@ module With_stable_witness = struct
     [@@@mode.default m = (global, local)]
 
     module%template.portable
-      [@modality p] V1
+      [@modality p]
+      V1
         (Stable_format : sig
            type ('a1, 'a2) t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -428,7 +441,8 @@ module With_stable_witness = struct
     end
 
     module%template.portable
-      [@modality p] V2
+      [@modality p]
+      V2
         (Stable_format : sig
            type ('a1, 'a2) t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -461,7 +475,8 @@ module With_stable_witness = struct
     [@@@mode.default m = (global, local)]
 
     module%template.portable
-      [@modality p] V1
+      [@modality p]
+      V1
         (Stable_format : sig
            type ('a1, 'a2, 'a3) t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -497,7 +512,8 @@ module With_stable_witness = struct
     end
 
     module%template.portable
-      [@modality p] V2
+      [@modality p]
+      V2
         (Stable_format : sig
            type ('a1, 'a2, 'a3) t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)

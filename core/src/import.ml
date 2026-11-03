@@ -88,15 +88,7 @@ include (
 module Variant = Variantslib.Variant
 
 let with_return = With_return.with_return
-
-let am_running_test =
-  try
-    ignore (Stdlib.Sys.getenv "TESTING_FRAMEWORK" : string);
-    true
-  with
-  (* [Caml.*] never raises [Not_found_s] *)
-  | Stdlib.Not_found -> false
-;;
+let am_running_test = Am_running_test.am_running_test
 
 type ('a : any) identity = 'a
 

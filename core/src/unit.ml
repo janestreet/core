@@ -41,11 +41,16 @@ module Stable = struct
     ;;
 
     let bin_shape_t = Bin_prot.Shape.(basetype (Uuid.of_string bin_name)) []
+
+    [%%template
+    [@@@mode.default m = (global, local)]
+
     let bin_size_t () = 0
-    let bin_size_t__local () = 0
     let bin_write_t (_ : Bin_prot.Common.buf) ~pos () = pos
-    let bin_write_t__local (_ : Bin_prot.Common.buf) ~pos () = pos
-    let bin_writer_t = { Bin_prot.Type_class.size = bin_size_t; write = bin_write_t }
+
+    let bin_writer_t : (_ Bin_prot.Type_class.writer[@mode m]) =
+      { Bin_prot.Type_class.size = bin_size_t [@mode m]; write = bin_write_t [@mode m] }
+    ;;]
 
     let bin_t =
       { Bin_prot.Type_class.shape = bin_shape_t

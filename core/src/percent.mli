@@ -15,10 +15,10 @@ type t = private float
 include Stringable with type t := t
 
 (** [to_string] can accept a locally-allocated argument. *)
-val to_string : local_ t -> string
+val to_string : t @ local -> string
 
 (** Equivalent to [Stable.V3.to_string] *)
-val to_string_round_trippable : local_ t -> string
+val to_string_round_trippable : t @ local -> string
 
 (** Sexps are of the form 5bp or 0.05% or 0.0005x.
 
@@ -108,9 +108,9 @@ val is_positive_legacy : t -> bool
 val is_non_negative_legacy : t -> bool
 val is_negative_legacy : t -> bool
 val is_non_positive_legacy : t -> bool
-val is_zero : local_ t -> bool
-val is_nan : local_ t -> bool
-val is_inf : local_ t -> bool
+val is_zero : t @ local -> bool
+val is_nan : t @ local -> bool
+val is_inf : t @ local -> bool
 
 (** [apply t x] multiplies the percent [t] by [x], returning a float. *)
 external apply
@@ -135,7 +135,7 @@ external to_mult : (t[@local_opt]) -> (float[@local_opt]) = "%identity"
     It is also not consistent with [of_string] or [t_of_sexp] for "%"-ending strings. The
     results can be off by an ulp. If this matters to you, use
     [of_percentage_slow_more_accurate] instead. *)
-val of_percentage : local_ float -> t
+val of_percentage : float @ local -> t
 
 (** Like [of_percentage], but consistent with [of_string] and [t_of_sexp], that is,
     [of_percentage_slow_more_accurate x = of_string (Float.to_string x ^ "%")] *)
@@ -149,7 +149,7 @@ val%template of_percentage_slow_more_accurate : float @ m -> t @ m
     ]}
     It is also not consistent with [Stable.V3.sexp_of_t] or [to_string_round_trippable].
     If this matters to you, use [to_percentage_slow_more_accurate] instead. *)
-val to_percentage : local_ t -> float
+val to_percentage : t @ local -> float
 
 (** Like [to_percentage], but consistent with [Stable.V3.sexp_of_t] and
     [to_string_round_trippable]. *)
@@ -164,7 +164,7 @@ val%template to_percentage_slow_more_accurate : t @ m -> float @ m
     It is also not consistent with [of_string] or [t_of_sexp] for "bp"-ending strings. The
     results can be off by an ulp. If this matters to you, use [of_bp_slow_more_accurate]
     instead. *)
-val of_bp : local_ float -> t
+val of_bp : float @ local -> t
 
 (** Like [of_bp], but consistent with [of_string] and [t_of_sexp], that is,
     [of_bp_slow_more_accurate x = of_string (Float.to_string x ^ "bp")] *)
@@ -178,17 +178,21 @@ val%template of_bp_slow_more_accurate : float @ m -> t @ m
     ]}
     It is also not consistent with [Stable.V3.sexp_of_t] or [to_string_round_trippable].
     If this matters to you, use [to_bp_slow_more_accurate] instead. *)
-val to_bp : local_ t -> float
+val to_bp : t @ local -> float
 
 (** Like [to_bp], but consistent with [Stable.V3.sexp_of_t] and
     [to_string_round_trippable]. *)
 val%template to_bp_slow_more_accurate : t @ m -> float @ m
 [@@mode m = (global, local)]
 
+(** [of_bp_int 5] is 5bp = 0.05% = 0.0005x. As with [of_bp], this may introduce rounding
+    errors from float division. *)
 val of_bp_int : int -> t
 
-(** rounds down *)
-val to_bp_int : local_ t -> int
+(** Converts to an integer number of basis points by truncating toward zero. For example,
+    [1.9bp] becomes [1] and [-1.9bp] becomes [-1]. The result is unspecified if the basis
+    point value is [nan] or falls outside the range of representable integers. *)
+val to_bp_int : t @ local -> int
 
 [%%template:
 [@@@mode.default m = (global, local)]
@@ -200,10 +204,10 @@ val round_significant : t @ m -> significant_digits:int -> t @ m
 val round_decimal_mult : t @ m -> decimal_digits:int -> t @ m]
 
 (** 0.0123456% ~decimal_digits:4 is 0.0123% = 1.23bp *)
-val round_decimal_percentage : local_ t -> decimal_digits:int -> t
+val round_decimal_percentage : t @ local -> decimal_digits:int -> t
 
 (** 0.0123456% ~decimal_digits:4 is 1.2346bp *)
-val round_decimal_bp : local_ t -> decimal_digits:int -> t
+val round_decimal_bp : t @ local -> decimal_digits:int -> t
 
 val t_of_sexp_allow_nan_and_inf : Sexp.t -> t
 val of_string_allow_nan_and_inf : string -> t
@@ -274,7 +278,7 @@ val sign : t -> Sign.t [@@deprecated "[since 2016-01] Replace [sign] with [sign_
 
 (** The sign of a [Percent.t]. Both [-0.] and [0.] map to [Zero]. Raises on nan. All other
     values map to [Neg] or [Pos]. *)
-val sign_exn : local_ t -> Sign.t
+val sign_exn : t @ local -> Sign.t
 
 val arg_type : t Command.Arg_type.t
 val arg_type_allow_nan_and_inf : t Command.Arg_type.t
@@ -344,7 +348,7 @@ module Stable : sig
       , stable_witness
       , diff]
 
-    val to_string : local_ t -> string
+    val to_string : t @ local -> string
     val of_string : string -> t
     val of_string_allow_nan_and_inf : string -> t
   end
@@ -388,7 +392,7 @@ module Stable : sig
       with type t := t
        and type comparator_witness := comparator_witness
 
-    val to_string : local_ t -> string
+    val to_string : t @ local -> string
     val of_string : string -> t
     val of_string_allow_nan_and_inf : string -> t
 
@@ -399,7 +403,7 @@ module Stable : sig
     module Always_percentage : sig
       type nonrec t = t [@@deriving sexp ~stackify, bin_io ~localize]
 
-      val to_string : local_ t -> string
+      val to_string : t @ local -> string
     end
   end
 
@@ -474,7 +478,7 @@ end
 module Almost_round_trippable : sig
   type nonrec t = t [@@deriving sexp ~stackify]
 
-  val to_string : local_ t -> string
+  val to_string : t @ local -> string
   val of_string : string -> t
 
   (** A variant with alternative serialization, which always uses the [%] format,
@@ -484,6 +488,6 @@ module Almost_round_trippable : sig
   module Always_percentage : sig
     type nonrec t = t [@@deriving sexp ~stackify, bin_io]
 
-    val to_string : local_ t -> string
+    val to_string : t @ local -> string
   end
 end

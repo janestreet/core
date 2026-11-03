@@ -450,13 +450,13 @@ module Make (Time0 : Time0_intf.S) () = struct
       ~f:of_span_since_epoch
   ;;
 
-  let gen_incl lo hi =
+  let%template gen_incl lo hi =
     Span.gen_incl (to_span_since_epoch lo) (to_span_since_epoch hi)
-    |> Base_quickcheck.Generator.map ~f:of_span_since_epoch
+    |> (Base_quickcheck.Generator.map [@mode portable]) ~f:of_span_since_epoch
   ;;
 
-  let gen_uniform_incl lo hi =
+  let%template gen_uniform_incl lo hi =
     Span.gen_uniform_incl (to_span_since_epoch lo) (to_span_since_epoch hi)
-    |> Base_quickcheck.Generator.map ~f:of_span_since_epoch
+    |> (Base_quickcheck.Generator.map [@mode portable]) ~f:of_span_since_epoch
   ;;
 end

@@ -75,7 +75,7 @@ module type For_unix = sig
     val exec
       :  prog:string
       -> argv:string list
-      -> ?use_path:local_ bool
+      -> ?use_path:bool @ local
       -> ?env:env
       -> unit
       -> Nothing.t
@@ -227,12 +227,16 @@ module type Arg_type = sig @@ portable
       [comma_separated] to produce a list whose only element is the empty string.)
 
       If [unique_values = true] no autocompletion will be offered for arguments already
-      supplied in the fragment to complete. *)
+      supplied in the fragment to complete.
+
+      If [propagate_additional_documentation = true] then [additional_documentation] will
+      be copied from [t]. Otherwise it will be set to [None]. *)
   val comma_separated
     :  ?allow_empty:bool (** default: [false] *)
     -> ?key:'a list Univ_map.Multi.Key.t @ p
     -> ?strip_whitespace:bool (** default: [false] *)
     -> ?unique_values:bool (** default: [false] *)
+    -> ?propagate_additional_documentation:bool (** default: [false] *)
     -> 'a t @ p
     -> 'a list t @ p
 
@@ -276,6 +280,27 @@ module type Command = sig
   (** Argument types. *)
   module Arg_type : Arg_type
   (** @inline *)
+
+  (** Named categories for grouping command-line flags in help output. *)
+  module Help_category : sig
+    type t
+
+    (** Raises if [abbrev] is empty.
+
+        [abbrev] defaults to the unlabeled [name] argument modified for convenient use as
+        a command-line argument. All letters are lowercased. Leading and trailing
+        non-alphanumeric characters are stripped, and internal sequences of them are
+        converted to a single [-].
+
+        For example, [Help_category.abbrev (Help_category.create "'Gourmet' Fast Food")]
+        is ["gourmet-fast-food"]. *)
+    val create : ?abbrev:string -> string -> t
+
+    val abbrev : t -> string
+
+    (** Used for grouping tests in help output. *)
+    val name : t -> string
+  end
 
   (** Command-line flag specifications. *)
   module Flag : sig
@@ -513,6 +538,31 @@ module type Command = sig
         -> ('a -> string)
         -> default:'a
         -> doc:string
+        -> 'a t
+
+      (** [categorize t ~category] associates [category] with all flags in [t], for use in
+          grouping flags in help output.
+
+          Named categories follow the default [=== flags ===] section in alphabetical
+          order. Each category has the header [=== <NAME> ===], where [<NAME>] is the
+          category's [Help_category.name]. Flags are sorted alphabetically within each
+          category.
+
+          Categories with the same name are merged, and any of their abbreviations select
+          the merged category. Categories with different names must not have the same
+          abbreviation; if they do, constructing the resulting command yields an error
+          similarly to providing two [flag]s with the same name.
+
+          Commands with categorized flags also have a [-help-category] flag, abbreviated
+          [-help-cat]. It accepts a category abbreviation or any unambiguous prefix and
+          displays only that category's flags.
+
+          If [override = true], replaces existing categories on flags. If
+          [override = false], only applies to flags without an existing category. *)
+      val categorize
+        :  ?override:bool (** default [false] *)
+        -> 'a t
+        -> category:Help_category.t
         -> 'a t
 
       (** [anon spec] specifies a command that, among other things, takes the anonymous

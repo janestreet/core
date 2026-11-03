@@ -16,7 +16,8 @@ module type Elt_binable = Hashtbl.Key_binable [@mode m]
 module type Elt_stable = Hashtbl.Key_stable [@mode m]]
 
 module%template.portable
-  [@modality p] Make_plain_with_hashable (T : sig
+  [@modality p]
+  Make_plain_with_hashable (T : sig
     module Elt : sig
       type t
 
@@ -45,7 +46,8 @@ module%template.portable Provide_of_sexp (Elt : Base.Hashtbl.M_of_sexp) = struct
 end
 
 module%template.portable
-  [@inline] [@modality p] Provide_bin_io (Elt : sig
+  [@inline] [@modality p]
+  Provide_bin_io (Elt : sig
     type t [@@deriving bin_io]
 
     include Elt_plain with type t := t
@@ -93,7 +95,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_with_hashable (T : sig
+  [@modality p]
+  Make_with_hashable (T : sig
     module Elt : Elt
 
     val hashable : Elt.t Hashtbl.Hashable.t
@@ -104,7 +107,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_binable_with_hashable (T : sig
+  [@modality p]
+  Make_binable_with_hashable (T : sig
     module Elt : Elt_binable
 
     val hashable : Elt.t Hashtbl.Hashable.t
@@ -115,7 +119,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_stable_with_hashable (T : sig
+  [@modality p]
+  Make_stable_with_hashable (T : sig
     module Elt : Elt_stable
 
     val hashable : Elt.t Hashtbl.Hashable.t
@@ -126,7 +131,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_plain (Elt : sig
+  [@modality p]
+  Make_plain (Elt : sig
     type t
 
     include Elt_plain with type t := t

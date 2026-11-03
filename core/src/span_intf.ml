@@ -223,5 +223,5 @@ module type S = sig @@ portable
 
   (** [randomize t ~percent] returns a span +/- percent * original span. Percent must be
       between 0% and 100% inclusive, and must be positive. *)
-  val randomize : ?state:Random.State.t -> t -> percent:Percent.t -> t
+  val randomize : ?state:Random.State.t @ local -> t -> percent:Percent.t -> t
 end

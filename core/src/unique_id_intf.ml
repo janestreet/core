@@ -3,7 +3,7 @@
 open! Import
 open Std_internal
 
-module type Id = sig
+module type Id_without_create = sig
   (** The sexps and strings look like integers. *)
   type t : immutable_data
   [@@deriving bin_io ~localize, hash, sexp ~stackify, sexp_grammar, typerep]
@@ -26,6 +26,10 @@ module type Id = sig
         with type comparator_witness = comparator_witness
     end
   end
+end
+
+module type Id = sig
+  include Id_without_create
 
   (** Always returns a value that is not equal to any other value created with [create]. *)
   val create : unit -> t

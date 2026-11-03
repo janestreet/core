@@ -242,7 +242,8 @@ module type Comparable = sig @@ portable
 
   (** Inherit comparability from a component. *)
   module%template.portable
-    [@modality p] Inherit
+    [@modality p]
+    Inherit
       (C : sig
          type t [@@deriving compare [@mode.explicit m]]
        end)
@@ -289,17 +290,20 @@ module type Comparable = sig @@ portable
       Thus there are functors like [Make_plain] or [Make_binable_using_comparator], etc. *)
 
   module%template.portable
-    [@modality p] Make_plain (T : sig
+    [@modality p]
+    Make_plain (T : sig
       type t [@@deriving (compare [@mode.explicit m]), sexp_of]
     end) : S_plain [@modality p] [@mode m] with type t := T.t
 
   module%template.portable
-    [@modality p] Make (T : sig
+    [@modality p]
+    Make (T : sig
       type t [@@deriving (compare [@mode.explicit m]), sexp]
     end) : S [@modality p] [@mode m] with type t := T.t
 
   module%template.portable
-    [@modality p] Make_plain_using_comparator (T : sig
+    [@modality p]
+    Make_plain_using_comparator (T : sig
       type t [@@deriving sexp_of]
 
       include Using_comparator_arg [@modality p] [@mode m] with type t := t
@@ -310,7 +314,8 @@ module type Comparable = sig @@ portable
     with type comparator_witness := T.comparator_witness
 
   module%template.portable
-    [@modality p] Make_using_comparator (T : sig
+    [@modality p]
+    Make_using_comparator (T : sig
       type t [@@deriving sexp]
 
       include Using_comparator_arg [@modality p] [@mode m] with type t := t
@@ -321,12 +326,14 @@ module type Comparable = sig @@ portable
     with type comparator_witness := T.comparator_witness
 
   module%template.portable
-    [@modality p] Make_binable (T : sig
+    [@modality p]
+    Make_binable (T : sig
       type t [@@deriving bin_io, (compare [@mode.explicit m]), sexp]
     end) : S_binable [@modality p] [@mode m] with type t := T.t
 
   module%template.portable
-    [@modality p] Make_binable_using_comparator (T : sig
+    [@modality p]
+    Make_binable_using_comparator (T : sig
       type t [@@deriving bin_io, sexp]
 
       include Using_comparator_arg [@modality p] [@mode m] with type t := t
@@ -337,7 +344,8 @@ module type Comparable = sig @@ portable
     with type comparator_witness := T.comparator_witness
 
   module%template.portable
-    [@modality p] Extend_plain
+    [@modality p]
+    Extend_plain
       (M : Base.Comparable.S
     [@modality p] [@mode m])
       (X : sig
@@ -349,7 +357,8 @@ module type Comparable = sig @@ portable
     with type comparator_witness := M.comparator_witness
 
   module%template.portable
-    [@modality p] Extend
+    [@modality p]
+    Extend
       (M : Base.Comparable.S
     [@modality p] [@mode m])
       (X : sig
@@ -361,7 +370,8 @@ module type Comparable = sig @@ portable
     with type comparator_witness := M.comparator_witness
 
   module%template.portable
-    [@modality p] Extend_binable
+    [@modality p]
+    Extend_binable
       (M : Base.Comparable.S
     [@modality p] [@mode m])
       (X : sig
@@ -373,12 +383,14 @@ module type Comparable = sig @@ portable
     with type comparator_witness := M.comparator_witness
 
   module%template.portable
-    [@modality p] Map_and_set_binable (T : sig
+    [@modality p]
+    Map_and_set_binable (T : sig
       type t [@@deriving bin_io, (compare [@mode.explicit m]), sexp]
     end) : Map_and_set_binable [@modality p] with type t := T.t
 
   module%template.portable
-    [@modality p] Map_and_set_binable_using_comparator (T : sig
+    [@modality p]
+    Map_and_set_binable_using_comparator (T : sig
       type t [@@deriving bin_io, (compare [@mode.explicit m]), sexp]
 
       include Comparator.S [@modality p] with type t := t
@@ -389,12 +401,14 @@ module type Comparable = sig @@ portable
     with type comparator_witness := T.comparator_witness
 
   module%template.portable
-    [@modality p] Poly (T : sig
+    [@modality p]
+    Poly (T : sig
       type t [@@deriving sexp]
     end) : S [@modality p] [@mode m] with type t := T.t
 
   module%template.portable
-    [@modality p] Validate (T : sig
+    [@modality p]
+    Validate (T : sig
       type t [@@deriving (compare [@mode.explicit m]), sexp_of]
     end) : Validate [@modality p] with type t := T.t
 
@@ -440,7 +454,8 @@ module type Comparable = sig @@ portable
       end
 
       module%template.portable
-        [@modality p] Make
+        [@modality p]
+        Make
           (X : Stable_module_types.S0
         [@modality p]) :
         S with type comparable := X.t with type comparator_witness := X.comparator_witness
@@ -462,7 +477,8 @@ module type Comparable = sig @@ portable
         end
 
         module%template.portable
-          [@modality p] Make
+          [@modality p]
+          Make
             (X : Stable_module_types.With_stable_witness.S0
           [@modality p]) :
           S

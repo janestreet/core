@@ -6,7 +6,8 @@ include Immediate_option_intf
 [@@@mode.default (p, c) = ((nonportable, uncontended), (portable, contended))]
 
 module
-  [@inline] Provide_or_null_conversions (Option : sig
+  [@inline]
+  Provide_or_null_conversions (Option : sig
   @@ p
     type t : value mod c
 
@@ -29,7 +30,8 @@ struct
 end
 
 module
-  [@inline] Provide_or_null_conversions_zero_alloc (Option : sig
+  [@inline]
+  Provide_or_null_conversions_zero_alloc (Option : sig
   @@ p
     type t : value mod c
 

@@ -4,7 +4,8 @@ include Base.Sexpable
 module Stable = struct
   module Of_sexpable = struct
     module%template.portable
-      [@alloc a @ m = (heap_global, stack_local)] V1
+      [@alloc a @ m = (heap_global, stack_local)]
+      V1
         (Sexpable : sig
            type t
 
@@ -33,7 +34,8 @@ module Stable = struct
 
   module Of_sexpable1 = struct
     module%template.portable
-      [@alloc a @ m = (heap_global, stack_local)] [@kind ka = (value, any)] V1
+      [@alloc a @ m = (heap_global, stack_local)] [@kind ka = (value, any)]
+      V1
         (Sexpable : sig
            type ('a : ka) t
 
@@ -64,7 +66,8 @@ module Stable = struct
   module Of_sexpable2 = struct
     module%template.portable
       [@alloc a @ m = (heap_global, stack_local)]
-      [@kind ka = (value, any), kb = (value, any)] V1
+      [@kind ka = (value, any), kb = (value, any)]
+      V1
         (Sexpable : sig
            type ('a : ka, 'b : kb) t
 
@@ -102,7 +105,8 @@ module Stable = struct
   module Of_sexpable3 = struct
     module%template.portable
       [@alloc a @ m = (heap_global, stack_local)]
-      [@kind ka = (value, any), kb = (value, any), kc = (value, any)] V1
+      [@kind ka = (value, any), kb = (value, any), kc = (value, any)]
+      V1
         (Sexpable : sig
            type ('a : ka, 'b : kb, 'c : kc) t
 
@@ -144,7 +148,8 @@ module Stable = struct
 
   module Of_stringable = struct
     module%template.portable
-      [@alloc a = (heap, stack)] V1
+      [@alloc a = (heap, stack)]
+      V1
         (M : Stringable.S
       [@alloc a]) : sig
         type t [@@deriving sexp_grammar]

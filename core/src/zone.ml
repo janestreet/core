@@ -105,6 +105,9 @@ module Stable = struct
         val set : t Atomic.Loc.t @ local -> Index.t -> unit
         val reset : t Atomic.Loc.t @ local -> unit
       end = struct
+        (* [Portable.Shards.Lazy] allows us to avoid both false sharing (by padding each
+           atomic) and increased memory usage in the single-domain case (by lazily
+           increasing the shard count). *)
         module Shards = Portable.Shards.Lazy (struct
             type t = Index.t Atomic.t
 
@@ -115,8 +118,8 @@ module Stable = struct
         type t = Shards.Unboxed.t
 
         let create = Shards.Unboxed.create
-        let get t = Atomic.get (Shards.Unboxed.get t) [@@inline]
-        let set t index = Atomic.set (Shards.Unboxed.get t) index [@@inline]
+        let[@inline] get t = Atomic.get (Shards.Unboxed.get t)
+        let[@inline] set t index = Atomic.set (Shards.Unboxed.get t) index
         let reset t = Shards.Unboxed.reset t
       end
 
@@ -125,23 +128,22 @@ module Stable = struct
         ; original_filename : string option
         ; digest : Md5.t option
         ; transitions : Transition.t iarray
-        ; mutable last_regime_index : Index_cache.t [@atomic]
+        ; (* caches the index of the last transition we used to make lookups faster *)
+          mutable last_regime_index : Index_cache.t [@atomic]
         ; default_local_time_type : Regime.t
         ; leap_seconds : Leap_second.t list
         }
 
-      let index_cache_get t = Index_cache.get [%atomic.loc t.last_regime_index] [@nontail]
-      [@@inline]
+      let[@inline] index_cache_get t =
+        Index_cache.get [%atomic.loc t.last_regime_index] [@nontail]
       ;;
 
-      let index_cache_set t index =
+      let[@inline] index_cache_set t index =
         Index_cache.set [%atomic.loc t.last_regime_index] index [@nontail]
-      [@@inline]
       ;;
 
-      let index_cache_reset t =
+      let[@inline] index_cache_reset t =
         Index_cache.reset [%atomic.loc t.last_regime_index] [@nontail]
-      [@@inline]
       ;;
 
       include%template struct

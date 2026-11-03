@@ -1,5 +1,6 @@
 open! Import
 open Hash_queue_intf
+module Sexp = Base.Sexp
 
 module type Key = Key
 module type S_backend = S_backend
@@ -33,7 +34,7 @@ module%template Make_backend (Table : Hashtbl_intf.Hashtbl [@modality portable])
     end
 
     open Key_value.T
-    module Elt = Doubly_linked.Elt
+    module Elt : module type of Doubly_linked.Elt = Doubly_linked.Elt
 
     type ('key, 'data) t =
       { mutable num_readers : int
@@ -450,7 +451,8 @@ module%template Make_backend (Table : Hashtbl_intf.Hashtbl [@modality portable])
   end
 
   module%template.portable
-    [@modality p] Make (Key : sig
+    [@modality p]
+    Make (Key : sig
       type t
 
       include Key with type t := t

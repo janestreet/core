@@ -75,6 +75,7 @@ module Hashtbl_intf = Hashtbl_intf
 module Heap_block = Heap_block
 module Hexdump = Hexdump
 module Hexdump_intf = Hexdump_intf
+module Hlist = Base.Hlist
 module Host_and_port = Host_and_port
 module Iarray = Iarray
 module Identifiable = Identifiable

@@ -255,7 +255,7 @@ module Stable = struct
 
       external format_float
         :  string
-        -> local_ float
+        -> float @ local
         -> string
         @@ portable
         = "caml_format_float"
@@ -329,7 +329,7 @@ module Stable = struct
         @@ portable
           type t
 
-          val to_string : local_ t -> string
+          val to_string : t @ local -> string
           val of_string : string -> t
           val of_string_allow_nan_and_inf : string -> t
         end
@@ -502,7 +502,7 @@ module Stable = struct
 
       external format_float
         :  string
-        -> local_ float
+        -> float @ local
         -> string
         @@ portable
         = "caml_format_float"
@@ -536,7 +536,7 @@ module Stable = struct
         @@ portable
           type t
 
-          val%template to_string : local_ t -> string @ m
+          val%template to_string : t @ local -> string @ m
           [@@alloc a @ m = (heap_global, stack_local)]
 
           val of_string : string -> t
@@ -829,9 +829,9 @@ sig
   external ( / ) : (t[@local_opt]) -> (t[@local_opt]) -> (t[@local_opt]) = "%divfloat"
   external abs : (t[@local_opt]) -> (t[@local_opt]) = "%absfloat"
   external neg : (t[@local_opt]) -> (t[@local_opt]) = "%negfloat"
-  val is_nan : local_ t -> bool
-  val is_inf : local_ t -> bool
-  val sign_exn : local_ t -> Sign.t
+  val is_nan : t @ local -> bool
+  val is_inf : t @ local -> bool
+  val sign_exn : t @ local -> Sign.t
 
   include Robustly_comparable with type t := t
 end)

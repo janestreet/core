@@ -220,7 +220,7 @@ module Stable = struct
 
     (* This test documents the original to-string representation and fails under
        javascript due to differences in the rounding. *)
-    let%expect_test (_ [@tags "no-js"]) =
+    let%expect_test (_ [@tags "64-bits-only"]) =
       printf !"%{}" (of_bytes_int 1000);
       [%expect {| 1000b |}];
       printf !"%{}" (of_bytes_int 1023);

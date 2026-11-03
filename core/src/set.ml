@@ -252,7 +252,8 @@ module%template.portable Make_tree_S1 (Elt : Comparator.S1) :
 end
 
 module%template.portable
-  [@modality p] Make_tree_plain (Elt : sig
+  [@modality p]
+  Make_tree_plain (Elt : sig
     type t [@@deriving sexp_of]
 
     include Comparator.S with type t := t
@@ -280,7 +281,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_tree (Elt : sig
+  [@modality p]
+  Make_tree (Elt : sig
     type t [@@deriving sexp]
 
     include Comparator.S with type t := t
@@ -404,6 +406,10 @@ struct
 
   let[@mode local] bin_size_t t = bin_size_t (Base.Set.globalize0 t)
   let[@mode local] bin_write_t buf ~pos t = bin_write_t buf ~pos (Base.Set.globalize0 t)
+
+  let[@mode local] bin_writer_t : (_ Bin_prot.Type_class.writer[@mode local]) =
+    { size = bin_size_t [@mode local]; write = bin_write_t [@mode local] }
+  ;;
 end
 
 module Provide_stable_witness (Elt : sig
@@ -420,7 +426,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_plain_using_comparator (Elt : sig
+  [@modality p]
+  Make_plain_using_comparator (Elt : sig
     type t [@@deriving sexp_of]
 
     include Comparator.S [@modality p] with type t := t
@@ -474,7 +481,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_using_comparator (Elt_sexp : sig
+  [@modality p]
+  Make_using_comparator (Elt_sexp : sig
     type t [@@deriving sexp]
 
     include Comparator.S [@modality p] with type t := t
@@ -498,7 +506,8 @@ Make_using_comparator [@modality p] (struct
   end)
 
 module%template.portable
-  [@modality p] Make_binable_using_comparator (Elt_bin_sexp : sig
+  [@modality p]
+  Make_binable_using_comparator (Elt_bin_sexp : sig
     type t [@@deriving bin_io, sexp]
 
     include Comparator.S [@modality p] with type t := t
@@ -553,18 +562,21 @@ module For_deriving = struct
       M.__bin_read_t__
     ;;
 
-    type%template binio =
-      { bin_shape_m__t : 'a 'c. ('a, 'c) Elt_bin_io.t -> Bin_shape.t
-      ; bin_size_m__t : 'a 'c. ('a, 'c) Elt_bin_io.t -> ('a, 'c) t Bin_prot.Size.sizer
-      ; bin_size_m__t__local :
-          'a 'c. ('a, 'c) Elt_bin_io.t -> (('a, 'c) t Bin_prot.Size.sizer[@mode local])
-      ; bin_write_m__t : 'a 'c. ('a, 'c) Elt_bin_io.t -> ('a, 'c) t Bin_prot.Write.writer
-      ; bin_write_m__t__local :
-          'a 'c. ('a, 'c) Elt_bin_io.t -> (('a, 'c) t Bin_prot.Write.writer[@mode local])
-      ; bin_read_m__t : 'a 'c. ('a, 'c) Elt_bin_io.t -> ('a, 'c) t Bin_prot.Read.reader
-      ; __bin_read_m__t__ :
-          'a 'c. ('a, 'c) Elt_bin_io.t -> ('a, 'c) t Bin_prot.Read.vtag_reader
-      }
+    [%%template
+      type binio =
+        { bin_shape_m__t : 'a 'c. ('a, 'c) Elt_bin_io.t -> Bin_shape.t
+        ; bin_size_m__t : 'a 'c. ('a, 'c) Elt_bin_io.t -> ('a, 'c) t Bin_prot.Size.sizer
+        ; bin_size_m__t__local :
+            'a 'c. ('a, 'c) Elt_bin_io.t -> (('a, 'c) t Bin_prot.Size.sizer[@mode local])
+        ; bin_write_m__t :
+            'a 'c. ('a, 'c) Elt_bin_io.t -> ('a, 'c) t Bin_prot.Write.writer
+        ; bin_write_m__t__local :
+            'a 'c.
+            ('a, 'c) Elt_bin_io.t -> (('a, 'c) t Bin_prot.Write.writer[@mode local])
+        ; bin_read_m__t : 'a 'c. ('a, 'c) Elt_bin_io.t -> ('a, 'c) t Bin_prot.Read.reader
+        ; __bin_read_m__t__ :
+            'a 'c. ('a, 'c) Elt_bin_io.t -> ('a, 'c) t Bin_prot.Read.vtag_reader
+        }]
 
     let binio =
       { bin_shape_m__t
@@ -694,7 +706,8 @@ module Stable = struct
     include For_deriving_stable
 
     module%template.portable
-      [@modality p] Make
+      [@modality p]
+      Make
         (Elt : Stable_module_types.S0
       [@modality p]) =
       Make_binable_using_comparator [@modality p] (Elt)
@@ -707,7 +720,8 @@ module Stable = struct
       end
 
       module%template.portable
-        [@modality p] Make
+        [@modality p]
+        Make
           (Elt_stable : Stable_module_types.With_stable_witness.S0
         [@modality p]) =
       struct

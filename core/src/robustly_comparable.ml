@@ -7,11 +7,17 @@
 module type S = sig
   type t
 
-  val ( >=. ) : local_ t -> local_ t -> bool
-  val ( <=. ) : local_ t -> local_ t -> bool
-  val ( =. ) : local_ t -> local_ t -> bool
-  val ( >. ) : local_ t -> local_ t -> bool
-  val ( <. ) : local_ t -> local_ t -> bool
-  val ( <>. ) : local_ t -> local_ t -> bool
-  val robustly_compare : local_ t -> local_ t -> int
+  val ( >=. ) : t @ local -> t @ local -> bool
+  val ( <=. ) : t @ local -> t @ local -> bool
+  val ( =. ) : t @ local -> t @ local -> bool
+  val ( >. ) : t @ local -> t @ local -> bool
+  val ( <. ) : t @ local -> t @ local -> bool
+  val ( <>. ) : t @ local -> t @ local -> bool
+
+  (** Warning: despite its name, this is not a comparator. It uses a fixed absolute
+      tolerance, so the approximate equality it defines is non-transitive. Never pass it
+      to sorting or deduplication functions, [Map] or [Set], or [Comparable.Make]. Use an
+      exact comparator for ordering, and the robust operators above only for pairwise
+      threshold checks. *)
+  val robustly_compare : t @ local -> t @ local -> int
 end

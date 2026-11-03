@@ -19,12 +19,7 @@ type t = Span.t (* since the Unix epoch (1970-01-01 00:00:00 UTC) *)
 module Replace_polymorphic_compare_efficient = Span.Replace_polymorphic_compare
 include Replace_polymorphic_compare_efficient
 
-include (
-  Span :
-  sig
-  @@ portable
-    include Quickcheck.S_int with type t := t
-  end)
+include%template (Span : Quickcheck.S_int [@modality portable] with type t := t)
 
 let[@zero_alloc] now t = Span.since_unix_epoch t
 let equal = Span.equal
@@ -1132,14 +1127,22 @@ module Ofday = struct
   module Zoned = struct
     type t =
       { ofday : Ofday_ns.t
-      ; zone : Timezone.t
+      ; global_ zone : Timezone.t
       }
     [@@deriving
-      bin_io, fields ~getters ~local_getters, compare ~localize, equal ~localize, hash]
+      bin_io ~localize
+      , compare ~localize
+      , equal ~localize
+      , fields ~getters ~local_getters
+      , globalize
+      , hash]
 
-    type sexp_repr = Ofday_ns.t * Timezone.t [@@deriving sexp, sexp_grammar]
+    type sexp_repr = Ofday_ns.t * Timezone.t [@@deriving sexp ~stackify, sexp_grammar]
 
-    let sexp_of_t t = [%sexp_of: sexp_repr] (t.ofday, t.zone)
+    let%template sexp_of_t t =
+      ([%sexp_of: sexp_repr] [@alloc a]) (t.ofday, t.zone) [@exclave_if_stack a]
+    [@@alloc a @ m = (heap @ global, stack @ local)]
+    ;;
 
     let t_of_sexp sexp =
       let ofday, zone = [%of_sexp: sexp_repr] sexp in
@@ -1150,6 +1153,21 @@ module Ofday = struct
     let to_time_ns t date = of_date_ofday ~zone:(zone t) date (ofday t)
     let create ofday zone = { ofday; zone }
     let create_local ofday = create ofday (Portable_lazy.force Timezone.local_portable)
+
+    let add t span =
+      match Ofday_ns.add t.ofday span with
+      | None -> None
+      | Some ofday -> Some { t with ofday }
+    ;;
+
+    let sub t span =
+      match Ofday_ns.sub t.ofday span with
+      | None -> None
+      | Some ofday -> Some { t with ofday }
+    ;;
+
+    let add_exn t span = { t with ofday = Ofday_ns.add_exn t.ofday span }
+    let sub_exn t span = { t with ofday = Ofday_ns.sub_exn t.ofday span }
 
     let of_string string : t =
       match String.rsplit2 string ~on:' ' with
@@ -1162,11 +1180,22 @@ module Ofday = struct
       String.concat [ Ofday_ns.to_string t.ofday; " "; Timezone.to_string t.zone ]
     ;;
 
+    let to_string_trimmed (t : t) : string =
+      String.concat [ Ofday_ns.to_string_trimmed t.ofday; " "; Timezone.to_string t.zone ]
+    ;;
+
     let%template arg_type = (Command.Arg_type.create [@mode portable]) of_string
 
     module With_nonchronological_compare = struct
       type nonrec t = t
-      [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
+      [@@deriving
+        bin_io ~localize
+        , compare ~localize
+        , equal ~localize
+        , globalize
+        , hash
+        , sexp ~stackify
+        , sexp_grammar]
     end
 
     include%template Pretty_printer.Register [@modality portable] (struct
@@ -1180,12 +1209,12 @@ module Ofday = struct
       module V1 = struct
         [%%rederive
           type t = With_nonchronological_compare.t
-          [@@deriving compare ~localize ~portable, equal ~localize ~portable]]
+          [@@deriving compare ~localize, equal ~localize]]
 
         module Bin_repr = struct
           type nonrec t = t =
             { ofday : Ofday_ns.Stable.V1.t
-            ; zone : Timezone.Stable.V1.t
+            ; zone : Timezone.Stable.V1.t @@ global
             }
           [@@deriving bin_io ~localize, stable_witness]
         end
@@ -1215,9 +1244,12 @@ module Ofday = struct
         let stable_witness : t Stable_witness.t = Bin_repr.stable_witness
 
         type sexp_repr = Ofday_ns.Stable.V1.t * Timezone.Stable.V1.t
-        [@@deriving sexp, sexp_grammar]
+        [@@deriving sexp ~stackify, sexp_grammar]
 
-        let sexp_of_t t = [%sexp_of: sexp_repr] (ofday t, zone t)
+        let%template sexp_of_t t =
+          ([%sexp_of: sexp_repr] [@alloc a]) (ofday t, zone t) [@exclave_if_stack a]
+        [@@alloc a @ m = (heap @ global, stack @ local)]
+        ;;
 
         let t_of_sexp sexp =
           let ofday, zone = [%of_sexp: sexp_repr] sexp in

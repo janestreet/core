@@ -175,22 +175,17 @@ let init = Zone_cache.init
 let initialized_zones = Zone_cache.initialized_zones
 
 let find zone =
-  let zone =
+  let open struct
     (* Some aliases for convenience *)
-    match zone with
-    (* case insensitivity *)
-    | "utc" -> "UTC"
-    | "gmt" -> "GMT"
-    (* some aliases for common zones *)
-    | "chi" -> "America/Chicago"
-    | "nyc" -> "America/New_York"
-    | "hkg" -> "Asia/Hong_Kong"
-    | "lon" | "ldn" -> "Europe/London"
-    | "tyo" -> "Asia/Tokyo"
-    | "syd" -> "Australia/Sydney"
-    (* catchall *)
-    | _ -> zone
-  in
+    let alias zone =
+      match zone with
+      (* case insensitivity *)
+      | "utc" -> "UTC"
+      | "gmt" -> "GMT"
+      | _ -> zone
+    ;;
+  end in
+  let zone = alias zone in
   Zone_cache.find_or_load zone
 ;;
 

@@ -1,8 +1,16 @@
 open! Import
 open Std_internal
 open! Int63.O
-module Rounding_direction = Time_ns_intf.Rounding_direction
 module String = Base.String
+
+module Rounding_direction = struct
+  type t =
+    | Down
+    | Nearest
+    | Up
+    | Zero
+  [@@deriving equal ~localize, enumerate, sexp_of]
+end
 
 let module_name = "Core.Time_ns.Span"
 
@@ -245,16 +253,14 @@ module Stable0 = struct
       let stable_witness : t Stable_witness.t = Stable_witness.assert_stable
 
       let%template[@alloc a = (heap, stack)] sexp_of_t t =
-        (Time_float.Stable.Span.V1.sexp_of_t [@alloc a])
+        (Span_float.Stable.V1.sexp_of_t [@alloc a])
           (to_span_float_round_nearest t) [@exclave_if_stack a]
       ;;
 
-      let t_of_sexp s =
-        of_span_float_round_nearest (Time_float.Stable.Span.V1.t_of_sexp s)
-      ;;
+      let t_of_sexp s = of_span_float_round_nearest (Span_float.Stable.V1.t_of_sexp s)
 
       let t_sexp_grammar : t Sexplib0.Sexp_grammar.t =
-        Sexplib0.Sexp_grammar.coerce Time_float.Stable.Span.V1.t_sexp_grammar
+        Sexplib0.Sexp_grammar.coerce Span_float.Stable.V1.t_sexp_grammar
       ;;
 
       let of_int63_exn t = of_int63_ns t
@@ -837,7 +843,7 @@ let to_short_string t =
 
 let gen_incl = Int63.gen_incl
 let gen_uniform_incl = Int63.gen_uniform_incl
-let gen_log_incl = Int63.gen_incl
+let gen_log_incl = Int63.gen_log_incl
 let gen_log_uniform_incl = Int63.gen_log_uniform_incl
 
 include%template Pretty_printer.Register [@modality portable] (struct

@@ -96,7 +96,7 @@ module type Creators_generic = sig
   (** Never requires a comparator because it can get one from the input [Set.t]. *)
   val of_key_set
     :  ('k key, 'cmp cmp) Base.Set.t
-    -> f:local_ ('k key -> 'v)
+    -> f:('k key -> 'v) @ local
     -> ('k, 'v, 'cmp) t
 
   val quickcheck_generator
@@ -193,7 +193,7 @@ module type%template [@modality p = (portable, nonportable)] S_plain = sig
 
   include Diffable.S1_plain with type 'a t := 'a t and module Diff := Diff
 
-  val map : 'a t -> f:local_ ('a -> 'b) -> 'b t
+  val map : 'a t -> f:('a -> 'b) @ local -> 'b t
 
   val quickcheck_observer
     :  Key.t Quickcheck.Observer.t

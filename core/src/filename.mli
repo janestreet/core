@@ -16,7 +16,9 @@ include Hashable.S with type t := t
 
 module Stable : sig
   module V1 : sig
-    type nonrec t = t [@@deriving bin_io ~localize, equal ~localize, hash, sexp_grammar]
+    type nonrec t = t
+    [@@deriving
+      bin_io ~localize, equal ~localize, globalize, hash, sexp ~stackify, sexp_grammar]
 
     include%template
       Stable_comparable.With_stable_witness.V1

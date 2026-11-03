@@ -192,8 +192,8 @@ val of_error : ('a -> unit Or_error.t) @ p -> 'a check @ p
 [@@mode p = (portable, nonportable)]
 
 (** Creates a validation function from a function that produces a bool. *)
-val booltest : ('a : k). ('a -> bool) -> if_false:string -> 'a check
-[@@kind k = base_or_null_with_imm]
+val booltest : ('a : k). ('a -> bool) @ p -> if_false:string -> ('a check[@mode p]) @ p
+[@@kind k = base_or_null_with_imm] [@@mode p = (portable, nonportable)]
 
 (** Creates a validation function from a function that produces a bool. Forces the name
     only when validation fails. *)
@@ -218,6 +218,9 @@ val list : name:('a -> string) -> 'a check -> 'a list check
 val%template first_failure : t @ p -> t @ p -> t @ p [@@mode p = (portable, nonportable)]
 
 val of_error_opt : string option -> t @ portable
+
+val%template of_or_error : unit Or_error.t @ p -> t @ p
+[@@mode p = (portable, nonportable)]
 
 (** Validates an association list, naming each element using a user-defined function for
     computing the name. *)

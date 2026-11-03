@@ -7,7 +7,7 @@
 
 open! Import
 
-type 'a t
+type 'a t : value mod non_float
 [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp, sexp_grammar]
 
 include Container.S1 with type 'a t := 'a t

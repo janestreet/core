@@ -20,12 +20,6 @@ external raise
 external ignore : ('a : any). ('a[@local_opt]) -> unit @@ portable = "%ignore"
 [@@layout_poly]
 
-[%%if ocaml_version < (4, 12, 0)]
-
-let __FUNCTION__ = "<__FUNCTION__ not supported before OCaml 4.12>"
-
-[%%endif]
-
 external __LOC_OF__
   :  ('a[@local_opt])
   -> (string * 'a[@local_opt])

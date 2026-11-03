@@ -70,7 +70,9 @@ module Definitions = struct
     end
 
     module Portable = Base_quickcheck.Generator.Portable
-    module%template [@mode portable] Let_syntax = Portable.Let_syntax
+
+    module%template [@mode p = (nonportable, portable)] Let_syntax :
+      Base_quickcheck.Generator.Let_syntax [@mode p] with type ('a : any) t := 'a t
 
     val%template return
       : ('a : value_or_null mod contended).
@@ -103,8 +105,12 @@ module Definitions = struct
     val char_alphanum : char t
     val char_print : char t
     val char_whitespace : char t
-    val singleton : 'a -> 'a t
-    val doubleton : 'a -> 'a -> 'a t
+
+    val%template singleton : ('a : value_or_null mod c). 'a @ p -> 'a t @ p
+    [@@mode (p, c) = ((nonportable, uncontended), (portable, contended))]
+
+    val%template doubleton : ('a : value_or_null mod c). 'a @ p -> 'a @ p -> 'a t @ p
+    [@@mode (p, c) = ((nonportable, uncontended), (portable, contended))]
 
     (** Produce any of the given values, weighted equally.
 
@@ -832,5 +838,5 @@ module type Quickcheck = sig @@ portable
   (** with a default config *)
   include Quickcheck_configured @@ nonportable
 
-  module Configure (Config : Quickcheck_config) : Quickcheck_configured
+  module (Configure @@ nonportable) (Config : Quickcheck_config) : Quickcheck_configured
 end

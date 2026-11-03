@@ -68,15 +68,19 @@ module Merge_with_duplicates_element = struct
   [@@deriving bin_io]
 end
 
-module type Heap = sig
+module type%template [@mode p = (portable, nonportable)] Heap = sig
   type 'a t
 
-  val create : compare:('a -> 'a -> int) -> 'a t
+  val create : compare:('a -> 'a -> int) @ p -> 'a t
   val add : 'a t -> 'a -> 'a t
   val pop_min : 'a t -> ('a * 'a t) option
 end
 
-let merge_all (module Heap : Heap) seqs ~compare =
+let%template[@mode p = (portable, nonportable)] merge_all
+  (module Heap : Heap[@mode p])
+  seqs
+  ~compare
+  =
   let module Merge_all_state = struct
     type 'a t =
       { heap : ('a * 'a Base.Sequence.t) Heap.t
@@ -90,7 +94,7 @@ let merge_all (module Heap : Heap) seqs ~compare =
   unfold_step
     ~init:
       (Merge_all_state.create
-         ~heap:(Heap.create ~compare:(fun a b -> Base.Comparable.lift compare ~f:fst a b))
+         ~heap:(Heap.create ~compare:[%eta2 Base.Comparable.lift compare ~f:fst])
          ~not_yet_in_heap:seqs)
     ~f:(fun { heap; not_yet_in_heap } ->
       match not_yet_in_heap with

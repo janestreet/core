@@ -149,15 +149,14 @@ module Make (Time : Time) () = struct
       ;;
 
       let create_padded () = Portable.Padding.copy_as_padded (create ())
-      let get_lock_state t = Atomic.Loc.get [%atomic.loc t.lock_state] [@@inline]
-      let set_lock_state t v = Atomic.Loc.set [%atomic.loc t.lock_state] v [@@inline]
+      let[@inline] get_lock_state t = Atomic.Loc.get [%atomic.loc t.lock_state]
+      let[@inline] set_lock_state t v = Atomic.Loc.set [%atomic.loc t.lock_state] v
 
-      let compare_and_set_lock_state t ~if_phys_equal_to ~replace_with =
+      let[@inline] compare_and_set_lock_state t ~if_phys_equal_to ~replace_with =
         Atomic.Loc.compare_and_set
           [%atomic.loc t.lock_state]
           ~if_phys_equal_to
           ~replace_with
-      [@@inline]
       ;;
 
       let reset (t : t) =
@@ -185,6 +184,26 @@ module Make (Time : Time) () = struct
           Time.sub (Date_and_ofday.to_absolute rel ~offset_from_utc) span
         in
         let effective_day_until = Time.add effective_day_start Span.day in
+        let date, effective_day_start, effective_day_until =
+          (* Correct for rounding errors that may occur in shifting/unshifting. Assumes
+             error is not worse than one day. *)
+          if Time.( <= ) effective_day_until effective_day_start
+          then
+            (* Overflow case near min/max representable date. Proceeding neither exception
+               nor correction preserves existing behavior, likely with bizarre results. *)
+            date, effective_day_start, effective_day_until
+          else if Time.( < ) time effective_day_start
+          then
+            ( Date0.add_days date (-1)
+            , Time.sub effective_day_start Span.day
+            , effective_day_start )
+          else if Time.( >= ) time effective_day_until
+          then
+            ( Date0.add_days date 1
+            , effective_day_until
+            , Time.add effective_day_until Span.day )
+          else date, effective_day_start, effective_day_until
+        in
         let cache_start_incl =
           match Zone.index_has_prev_clock_shift zone index with
           | false -> effective_day_start

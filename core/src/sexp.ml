@@ -124,5 +124,3 @@ let of_sexp_allow_extra_fields_recursively of_sexp sexp =
 let quickcheck_generator = Base_quickcheck.Generator.sexp
 let quickcheck_observer = Base_quickcheck.Observer.sexp
 let quickcheck_shrinker = Base_quickcheck.Shrinker.sexp
-let compare = Sexplib.Sexp.compare
-let equal = Sexplib.Sexp.equal

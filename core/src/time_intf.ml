@@ -80,7 +80,7 @@ end
 module type Shared = sig
   type t : value mod contended many stateless unyielding
 
-  include Quickcheck.S_range with type t := t
+  include%template Quickcheck.S_range [@modality portable] with type t := t
 
   module Span : sig
     type t

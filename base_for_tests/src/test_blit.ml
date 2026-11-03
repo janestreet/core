@@ -277,7 +277,8 @@ module Test1_phantom2_distinct
     (Tested)
 
 module%template.portable
-  [@modality p] Make_and_test
+  [@modality p]
+  Make_and_test
     (Elt : Elt)
     (Sequence : sig
        include Sequence with type elt := Elt.t
@@ -291,7 +292,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make_distinct_and_test
+  [@modality p]
+  Make_distinct_and_test
     (Elt : Elt)
     (Src : Sequence with type elt := Elt.t)
     (Dst : sig
@@ -306,7 +308,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make1_and_test (Sequence : sig
+  [@modality p]
+  Make1_and_test (Sequence : sig
     include Blit.Sequence1
     include Sequence1 with type 'a t := 'a t with type 'a elt := 'a
   end) =
@@ -317,7 +320,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make1_generic_and_test
+  [@modality p]
+  Make1_generic_and_test
     (Elt : Elt1)
     (Sequence : sig
        include Blit.Sequence1
@@ -330,16 +334,17 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make1_phantom2_and_test
+  [@modality p]
+  Make1_phantom2_and_test
     (Elt : Elt1)
     (Sequence : sig
        type (_, _, _) t
 
        val get : ('elt, _, _) t -> int -> 'elt Elt.t
        val set : ('elt, _, _) t -> int -> 'elt Elt.t -> unit
-       val length : local_ (_, _, _) t -> int
+       val length : (_, _, _) t @ local -> int
        val create_bool : len:int -> (bool, _, _) t
-       val create_like : len:int -> local_ ('elt, _, _) t -> ('elt, _, _) t
+       val create_like : len:int -> ('elt, _, _) t @ local -> ('elt, _, _) t
        val unsafe_blit : (('elt, _, _) t, ('elt, _, _) t) Blit.blit
      end) =
 struct
@@ -349,13 +354,14 @@ struct
 end
 
 module%template.portable
-  [@modality p] Make1_phantom2_distinct_and_test
+  [@modality p]
+  Make1_phantom2_distinct_and_test
     (Elt : Elt1)
     (Src : Sequence1_phantom2 with type 'a elt := 'a Elt.t)
     (Dst : sig
        include Sequence1_phantom2 with type 'a elt := 'a Elt.t
 
-       val create_like : len:int -> local_ ('elt, _, _) Src.t -> ('elt, _, _) t
+       val create_like : len:int -> ('elt, _, _) Src.t @ local -> ('elt, _, _) t
        val unsafe_blit : (('elt, _, _) Src.t, ('elt, _, _) t) blit
      end) =
 struct

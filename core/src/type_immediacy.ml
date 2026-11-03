@@ -6,6 +6,7 @@
 *)
 
 open! Import
+open Small_numbers_shim
 module List = Base.List
 
 let sprintf = Printf.sprintf
@@ -15,11 +16,14 @@ module Allowed_ints = struct
     | None
     | All
     | Set of (int, Int.comparator_witness) Set.Tree.t
-    | From_zero_to of int
+    | Range of
+        { min : int
+        ; max : int (* inclusive *)
+        }
 
   let _invariant = function
     | None | All | Set _ -> ()
-    | From_zero_to n -> assert (n >= 0)
+    | Range { min; max } -> assert (max >= min)
   ;;
 
   let int_is_value t i =
@@ -27,7 +31,7 @@ module Allowed_ints = struct
     | None -> false
     | All -> true
     | Set set -> Set.Tree.mem ~comparator:Int.comparator set i
-    | From_zero_to n -> 0 <= i && i <= n
+    | Range { min; max } -> min <= i && i <= max
   ;;
 end
 
@@ -37,9 +41,7 @@ module Immediacy = struct
     | Sometimes
     | Never
     | Unknown
-  [@@deriving compare ~localize]
-
-  let%template[@mode m = local] equal = ([%compare.equal: t] [@mode m])
+  [@@deriving compare ~localize, equal ~localize]
 
   let to_string = function
     | Always -> "Always"
@@ -61,12 +63,16 @@ module T : sig
   val typename : ('a : any). 'a t -> string @@ portable
 
   module Never_values : sig
+    val int8_u : int8# t
+    val int16_u : int16# t
     val int32 : int32 t
-    val int32_u : int32# t
+    val int32_u : Basement.Int32_u.t t
     val int64 : int64 t
-    val int64_u : int64# t
+    val int64_u : Basement.Int64_u.t t
     val nativeint : nativeint t
-    val nativeint_u : nativeint# t
+    val nativeint_u : Basement.Nativeint_u.t t
+    val float32 : float32 t
+    val float32_u : float32_u t
     val float : float t
     val float_u : float# t
     val string : string t
@@ -130,11 +136,18 @@ end = struct
   let never_with_name name = create_with_name name Never None
   let never typename = create typename Never None
   let unknown typename = create typename Unknown None
-  let option = create_with_name "option" Sometimes (Allowed_ints.From_zero_to 0)
+
+  let option =
+    create_with_name "option" Sometimes (Allowed_ints.Range { min = 0; max = 0 })
+  ;;
+
   let or_null = create_with_name "or_null" Sometimes Allowed_ints.None
-  let list = create_with_name "list" Sometimes (Allowed_ints.From_zero_to 0)
+  let list = create_with_name "list" Sometimes (Allowed_ints.Range { min = 0; max = 0 })
 
   module Never_values = struct
+    let int8_u = never typename_of_int8_u
+    let int16_u = never typename_of_int16_u
+
     (* int32 is boxed even on 64b platform at the moment. *)
     let int32 = never typename_of_int32
     let int32_u = never typename_of_int32_u
@@ -142,6 +155,8 @@ end = struct
     let int64_u = never typename_of_int64_u
     let nativeint = never typename_of_nativeint
     let nativeint_u = never typename_of_nativeint_u
+    let float32 = never typename_of_float32
+    let float32_u = never typename_of_float32_u
     let float = never typename_of_float
     let float_u = never typename_of_float_u
     let string = never typename_of_string
@@ -163,9 +178,14 @@ end
 include T
 
 let int = create typename_of_int Always Allowed_ints.All
-let unit = create typename_of_unit Always (Allowed_ints.From_zero_to 0)
-let bool = create typename_of_bool Always (Allowed_ints.From_zero_to 1)
-let char = create typename_of_char Always (Allowed_ints.From_zero_to 255)
+let unit = create typename_of_unit Always (Allowed_ints.Range { min = 0; max = 0 })
+let bool = create typename_of_bool Always (Allowed_ints.Range { min = 0; max = 1 })
+let char = create typename_of_char Always (Allowed_ints.Range { min = 0; max = 255 })
+let int8 = create typename_of_int8 Always (Allowed_ints.Range { min = -0x80; max = 0x7f })
+
+let int16 =
+  create typename_of_int16 Always (Allowed_ints.Range { min = -0x8000; max = 0x7fff })
+;;
 
 module Computation_impl = struct
   type nonrec ('a : any) t = 'a t
@@ -187,6 +207,8 @@ module Computation_impl = struct
   let tuple4_u _ _ _ _ _ = tuple4_u
   let tuple5_u _ _ _ _ _ _ = tuple5_u
   let function_ _ _ _ = function_
+  let int8 = int8
+  let int16 = int16
   let int = int
   let char = char
   let bool = bool
@@ -265,7 +287,7 @@ module Computation_impl = struct
       let no_arg_count = List.length no_arg_list in
       let allowed_ints =
         if not (Variant.is_polymorphic variant)
-        then Allowed_ints.From_zero_to (no_arg_count - 1)
+        then Allowed_ints.Range { min = 0; max = no_arg_count - 1 }
         else
           List.map no_arg_list ~f:(fun (Tag tag) ->
             match Tag.create tag with
@@ -430,6 +452,8 @@ module Always = struct
   let char = char
   let bool = bool
   let unit = unit
+  let int8 = int8
+  let int16 = int16
 end
 
 module Sometimes = struct

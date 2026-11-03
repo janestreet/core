@@ -8,7 +8,9 @@ module type Stringable = Stringable.S
 module type%template [@mode local] Stringable = Stringable.S [@alloc stack]]
 
 module type%template
-  [@mode m = (global, local)] [@modality p = (portable, nonportable)] S_abstract = sig
+  [@mode m = (global, local)] [@modality p = (portable, nonportable)]
+  S_abstract = sig
+  @@ p
   type t
   [@@deriving
     (bin_io [@mode m])
@@ -54,13 +56,15 @@ module type%template
 end
 
 module type%template
-  [@mode m = (global, local)] [@modality p = (portable, nonportable)] S =
-  S_abstract [@mode m] [@modality p] with type t = private string
+  [@mode m = (global, local)] [@modality p = (portable, nonportable)]
+  S = S_abstract [@mode m] [@modality p] with type t = private string
 
 (** Some extra features we provide in [make], but don't want to require of any
     string-ID-like type. *)
 module type%template
-  [@mode m = (global, local)] [@modality p = (portable, nonportable)] S_with_extras = sig
+  [@mode m = (global, local)] [@modality p = (portable, nonportable)]
+  S_with_extras = sig
+  @@ p
   type t = private string [@@deriving typerep]
 
   include S [@mode m] [@modality p] with type t := t

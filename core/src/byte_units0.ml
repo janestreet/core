@@ -40,7 +40,10 @@ end = struct
     let n_abs = abs n in
     let f ~suffix ~size n =
       let f = to_float n /. to_float size in
-      if Float.( >= ) f 999.5
+      (* [%.3g] would switch to scientific notation for magnitudes that round to >= 1000
+         (4 significant digits). To avoid that, use [%.0f] instead, which rounds to the
+         nearest integer. *)
+      if Float.( >= ) (Float.abs f) 999.5
       then sprintf "%.0f%s" f suffix
       else sprintf "%.3g%s" f suffix
     in

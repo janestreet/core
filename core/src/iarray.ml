@@ -2,6 +2,13 @@ open! Import
 open Base_quickcheck.Export
 include Base.Iarray
 
+[%%template
+type ('a : k mod separable) iarray = 'a iarray
+[@@kind k = (base_non_value, value_or_null mod external64)]
+
+type ('a : k mod separable) t = 'a t
+[@@kind k = (base_non_value, value_or_null mod external64)]]
+
 module Stable = struct
   module V1 = struct
     type%template nonrec ('a : value_or_null mod separable) t = 'a t
@@ -39,3 +46,10 @@ include (
       include Stable.V1
     end
     with type ('a : value_or_null mod separable) t := 'a t)
+
+[%%template
+[@@@kind k = (base_or_null, value_or_null mod external64)]
+
+[%%rederive.portable
+  type nonrec ('a : k mod separable) t = ('a iarray[@kind k])
+  [@@deriving bin_io ~localize ~portable] [@@kind k]]]

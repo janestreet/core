@@ -24,7 +24,7 @@ module type Month = sig @@ portable
     , sexp ~stackify
     , sexp_grammar
     , typerep
-    , variants]
+    , variants ~fold]
 
   include%template
     Comparable.S_binable [@mode local] [@modality portable] with type t := t

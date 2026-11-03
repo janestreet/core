@@ -9,7 +9,7 @@ let raise_attempt_to_mutate_list_during_iteration () =
   raise_s (Atom "Doubly_linked: attempt to mutate list during iteration")
 ;;
 
-let phys_equal = ( == )
+let%template[@mode m = (local, global)] phys_equal = ( == )
 
 module Header : sig @@ portable
   type t : value_or_null mod stateless
@@ -19,7 +19,7 @@ module Header : sig @@ portable
   val equal : t -> t -> bool
   val incr_length : by:int -> t -> unit
   val check_no_pending_iterations : t -> unit
-  val with_iteration : t -> local_ (unit -> 'a) -> 'a
+  val with_iteration : t -> (unit -> 'a) @ local -> 'a
   val merge : t -> t -> [ `Same_already | `Merged ]
   val get_detached : unit -> t
 end = struct
@@ -102,7 +102,9 @@ module Elt : sig @@ portable
   type 'a t : mutable_data with 'a [@@deriving sexp_of]
 
   val header : 'a t -> Header.t
-  val equal : 'a t -> 'a t -> bool
+
+  val%template equal : 'a t @ m -> 'a t @ m -> bool [@@mode m = (local, global)]
+
   val create : 'a -> 'a t
   val value : 'a t -> 'a
   val set : 'a t -> 'a -> unit
@@ -122,7 +124,7 @@ end = struct
     ; mutable header : Header.t
     }
 
-  let equal = phys_equal
+  let%template[@mode m = (local, global)] equal = (phys_equal [@mode m])
   let next t = t.next
   let prev t = t.prev
   let header t = t.header
@@ -255,7 +257,10 @@ let invariant invariant_a t =
 ;;
 
 let create (type a) () : a t = ref Null
-let equal (t : _ t) t' = phys_equal t t'
+
+let%template[@mode m = (local, global)] equal (t : _ t @ m) (t' @ m) =
+  (phys_equal [@mode m]) t t'
+;;
 
 let of_list = function
   | [] -> create ()

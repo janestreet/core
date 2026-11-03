@@ -33,7 +33,7 @@ module type S = sig @@ portable
     , sexp_grammar
     , typerep]
 
-  include%template Comparable_binable [@mode local] with type t := t
+  include%template Comparable_binable [@mode local] [@modality portable] with type t := t
 
   include Hashable_binable with type t := t
   include Diffable.S_atomic with type t := t

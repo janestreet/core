@@ -148,6 +148,7 @@
     v} *)
 
 open! Import
+open Small_numbers_shim
 
 type ('a : any) t : immutable_data
 
@@ -185,6 +186,8 @@ module Always : sig
   val char : char t
   val bool : bool t
   val unit : unit t
+  val int8 : int8 t
+  val int16 : int16 t
 end
 
 module Sometimes : sig
@@ -253,6 +256,7 @@ module Never : sig
   val int64 : int64 t
   val nativeint : nativeint t
   val float : float t
+  val float32 : float32 t
   val string : string t
   val bytes : bytes t
   val array : ('a : any mod separable). 'a array t

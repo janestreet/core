@@ -36,11 +36,21 @@ module Num_occurrences : sig
   val to_help_string : t -> flag_name:string -> string
 end
 
+(** A named category for grouping flags in help output. *)
+module Help_category : sig
+  type t =
+    { abbrev : string
+    ; name : string
+    }
+  [@@deriving compare ~localize, fields ~getters, sexp_of]
+end
+
 module Flag_info : sig
   type t =
     { name : string (** See [flag_name] below. *)
     ; doc : string
     ; aliases : string list
+    ; help_category : Help_category.t option
     }
   [@@deriving compare ~localize, fields ~getters, sexp_of]
 
@@ -186,26 +196,62 @@ module Stable : sig
     end
   end
 
-  module Flag_info : sig
+  module Help_category : sig
     module V1 : sig
-      type t = Flag_info.t =
-        { name : string
-        ; doc : string
-        ; aliases : string list
+      type t = Help_category.t =
+        { abbrev : string
+        ; name : string
         }
       [@@deriving compare ~localize, sexp, stable_witness]
     end
   end
 
-  module Base_info : sig
+  module Flag_info : sig
     module V2 : sig
+      type t = Flag_info.t =
+        { name : string
+        ; doc : string
+        ; aliases : string list
+        ; help_category : Help_category.V1.t option
+        }
+      [@@deriving compare ~localize, sexp, stable_witness]
+    end
+
+    module V1 : sig
+      type t =
+        { name : string
+        ; doc : string
+        ; aliases : string list
+        }
+      [@@deriving compare ~localize, sexp, stable_witness]
+
+      val to_latest : t -> V2.t
+      val of_latest : V2.t -> t
+    end
+  end
+
+  module Base_info : sig
+    module V3 : sig
       type t = Base_info.t =
+        { summary : string
+        ; readme : string option
+        ; anons : Anons.V2.t
+        ; flags : Flag_info.V2.t list
+        }
+      [@@deriving compare ~localize, sexp, stable_witness]
+    end
+
+    module V2 : sig
+      type t =
         { summary : string
         ; readme : string option
         ; anons : Anons.V2.t
         ; flags : Flag_info.V1.t list
         }
       [@@deriving compare ~localize, sexp, stable_witness]
+
+      val to_latest : t -> V3.t
+      val of_latest : V3.t -> t
     end
 
     module V1 : sig
@@ -217,8 +263,8 @@ module Stable : sig
         }
       [@@deriving sexp, stable_witness]
 
-      val to_latest : t -> V2.t
-      val of_latest : V2.t -> t
+      val to_latest : t -> V3.t
+      val of_latest : V3.t -> t
     end
   end
 
@@ -276,13 +322,25 @@ module Stable : sig
   end
 
   module Fully_forced : sig
-    module V1 : sig
+    module V2 : sig
       type t = Fully_forced.t =
-        | Basic of Base_info.V2.t
+        | Basic of Base_info.V3.t
         | Group of t Group_info.V2.t
         | Exec of Exec_info.V3.t * t
       [@@deriving compare ~localize, sexp, stable_witness]
     end
+
+    module V1 : sig
+      type t =
+        | Basic of Base_info.V2.t
+        | Group of t Group_info.V2.t
+        | Exec of Exec_info.V3.t * t
+      [@@deriving compare ~localize, sexp, stable_witness]
+
+      val to_latest : t -> V2.t
+      val of_latest : V2.t -> t
+    end
+    [@@deprecated "[since 2026-08] Update to [Fully_forced.V2]."]
   end
 end
 

@@ -113,20 +113,26 @@ module Stable = struct
           { Bin_prot.Type_class.read = bin_read_t; vtag_read = __bin_read_t__ }
         ;;
 
-        let bin_size_t__local t =
+        let bin_size_t_internal t =
           Int.bin_size_t (year t) + Month.bin_size_t (month t) + Int.bin_size_t (day t)
         ;;
 
-        let bin_size_t t = bin_size_t__local t
+        let%template[@mode __ = (local, global)] bin_size_t t = bin_size_t_internal t
 
-        let bin_write_t__local buf ~pos t =
+        let bin_write_t_internal buf ~pos t =
           let pos = Int.bin_write_t buf ~pos (year t) in
           let pos = Month.bin_write_t buf ~pos (month t) in
           Int.bin_write_t buf ~pos (day t)
         ;;
 
-        let bin_write_t buf ~pos t = bin_write_t__local buf ~pos t
-        let bin_writer_t = { Bin_prot.Type_class.size = bin_size_t; write = bin_write_t }
+        let%template[@mode __ = (local, global)] bin_write_t buf ~pos t =
+          bin_write_t_internal buf ~pos t
+        ;;
+
+        let%template bin_writer_t : (t Bin_prot.Type_class.writer[@mode m]) =
+          { size = bin_size_t [@mode m]; write = bin_write_t [@mode m] }
+        [@@mode m = (global, local)]
+        ;;
 
         let bin_t =
           { Bin_prot.Type_class.reader = bin_reader_t

@@ -23,7 +23,10 @@ module type Monad = Monad.S
 module type Quickcheckable = Quickcheckable.S
 module type Robustly_comparable = Robustly_comparable.S
 module type Sexpable = Sexpable.S
-module type Stringable = Stringable.S
+
+module type%template Stringable = Stringable.S [@mode m] [@alloc a]
+[@@mode m = (global, local)] [@@alloc a = (heap, stack)]
+
 module type Unit = Unit.S
 
 [%%template

@@ -21,9 +21,11 @@ module Stable = struct
     let compare a _ = unreachable_code a
     let equal a _ = unreachable_code a
     let bin_size_t = unreachable_code
-    let bin_write_t _buf ~pos:_ t = unreachable_code t]
+    let bin_write_t _buf ~pos:_ t = unreachable_code t
 
-    let bin_writer_t = { Bin_prot.Type_class.size = bin_size_t; write = bin_write_t }
+    let bin_writer_t : (_ Bin_prot.Type_class.writer[@mode m]) =
+      { size = bin_size_t [@mode m]; write = bin_write_t [@mode m] }
+    ;;]
 
     let __bin_read_t__ _buf ~pos_ref _ =
       Bin_prot.Common.raise_variant_wrong_type tp_loc !pos_ref
@@ -55,9 +57,10 @@ module Stable = struct
       let get ~from ~to_:_ = unreachable_code from
       let apply_exn derived_on _ = unreachable_code derived_on
 
-      let of_list_exn = function
+      let of_list_exn (list : t list) =
+        match list with
         | [] -> exclave_ Diffable.Optional_diff.get_none ()
-        | t :: _ -> unreachable_code t
+        | _ :: _ -> .
       ;;
     end
   end

@@ -69,12 +69,11 @@ module Stable = struct
     module Model = V2
   end
 
-  module Flag_info = struct
+  module Help_category = struct
     module V1 = struct
       type t =
-        { name : string
-        ; doc : string
-        ; aliases : string list
+        { abbrev : string
+        ; name : string
         }
       [@@deriving compare ~localize, sexp, stable_witness]
     end
@@ -82,7 +81,48 @@ module Stable = struct
     module Model = V1
   end
 
+  module Flag_info = struct
+    module V2 = struct
+      type t =
+        { name : string
+        ; doc : string
+        ; aliases : string list
+        ; help_category : Help_category.V1.t option [@sexp.option]
+        }
+      [@@deriving compare ~localize, sexp, stable_witness]
+    end
+
+    module Model = V2
+
+    module V1 = struct
+      type t =
+        { name : string
+        ; doc : string
+        ; aliases : string list
+        }
+      [@@deriving compare ~localize, sexp, stable_witness]
+
+      let to_latest { name; doc; aliases } : V2.t =
+        { name; doc; aliases; help_category = None }
+      ;;
+
+      let of_latest { V2.name; doc; aliases; help_category = _ } = { name; doc; aliases }
+    end
+  end
+
   module Base_info = struct
+    module V3 = struct
+      type t =
+        { summary : string
+        ; readme : string option [@sexp.option]
+        ; anons : Anons.V2.t
+        ; flags : Flag_info.V2.t list
+        }
+      [@@deriving compare ~localize, sexp, stable_witness]
+    end
+
+    module Model = V3
+
     module V2 = struct
       type t =
         { summary : string
@@ -91,6 +131,14 @@ module Stable = struct
         ; flags : Flag_info.V1.t list
         }
       [@@deriving compare ~localize, sexp, stable_witness]
+
+      let to_latest { summary; readme; anons; flags } : V3.t =
+        { summary; readme; anons; flags = Base.List.map flags ~f:Flag_info.V1.to_latest }
+      ;;
+
+      let of_latest { V3.summary; readme; anons; flags } =
+        { summary; readme; anons; flags = Base.List.map flags ~f:Flag_info.V1.of_latest }
+      ;;
     end
 
     module V1 = struct
@@ -102,11 +150,11 @@ module Stable = struct
         }
       [@@deriving sexp, stable_witness]
 
-      let to_latest { summary; readme; usage; flags } =
+      let to_v2 { summary; readme; usage; flags } =
         { V2.summary; readme; anons = Usage usage; flags }
       ;;
 
-      let of_latest { V2.summary; readme; anons; flags } =
+      let of_v2 { V2.summary; readme; anons; flags } =
         { summary
         ; readme
         ; usage =
@@ -116,9 +164,10 @@ module Stable = struct
         ; flags
         }
       ;;
-    end
 
-    module Model = V2
+      let to_latest = Base.Fn.compose V2.to_latest to_v2
+      let of_latest = Base.Fn.compose of_v2 V2.of_latest
+    end
   end
 
   module Group_info = struct
@@ -245,21 +294,41 @@ module Stable = struct
   end
 
   module Fully_forced = struct
+    module V2 = struct
+      type t =
+        | Basic of Base_info.V3.t
+        | Group of t Group_info.V2.t
+        | Exec of Exec_info.V3.t * t
+      [@@deriving compare ~localize, sexp, stable_witness]
+    end
+
+    module Model = V2
+
     module V1 = struct
       type t =
         | Basic of Base_info.V2.t
         | Group of t Group_info.V2.t
         | Exec of Exec_info.V3.t * t
       [@@deriving compare ~localize, sexp, stable_witness]
-    end
 
-    module Model = V1
+      let rec to_latest : t -> V2.t = function
+        | Basic b -> Basic (Base_info.V2.to_latest b)
+        | Group g -> Group (Group_info.V2.map g ~f:to_latest)
+        | Exec (e, t) -> Exec (e, to_latest t)
+      ;;
+
+      let rec of_latest : V2.t -> t = function
+        | Basic b -> Basic (Base_info.V2.of_latest b)
+        | Group g -> Group (Group_info.V2.map g ~f:of_latest)
+        | Exec (e, t) -> Exec (e, of_latest t)
+      ;;
+    end
   end
 
   module Sexpable = struct
-    module V3 = struct
+    module V4 = struct
       type t =
-        | Base of Base_info.V2.t
+        | Base of Base_info.V3.t
         | Group of t Group_info.V2.t
         | Exec of Exec_info.V3.t
         | Lazy of t Lazy.t
@@ -269,7 +338,30 @@ module Stable = struct
       let of_latest = Base.Fn.id
     end
 
-    module Model = V3
+    module Model = V4
+
+    module V3 = struct
+      type t =
+        | Base of Base_info.V2.t
+        | Group of t Group_info.V2.t
+        | Exec of Exec_info.V3.t
+        | Lazy of t Lazy.t
+      [@@deriving sexp, stable_witness]
+
+      let rec to_latest : t -> Model.t = function
+        | Base b -> Base (Base_info.V2.to_latest b)
+        | Group g -> Group (Group_info.V2.map g ~f:to_latest)
+        | Exec e -> Exec e
+        | Lazy thunk -> Lazy (Base.Lazy.map thunk ~f:to_latest)
+      ;;
+
+      let rec of_latest : Model.t -> t = function
+        | Base b -> Base (Base_info.V2.of_latest b)
+        | Group g -> Group (Group_info.V2.map g ~f:of_latest)
+        | Exec e -> Exec e
+        | Lazy thunk -> Lazy (Base.Lazy.map thunk ~f:of_latest)
+      ;;
+    end
 
     module V2 = struct
       type t =
@@ -279,13 +371,13 @@ module Stable = struct
       [@@deriving sexp, stable_witness]
 
       let rec to_latest : t -> Model.t = function
-        | Base b -> Base b
+        | Base b -> Base (Base_info.V2.to_latest b)
         | Exec e -> Exec (Exec_info.V2.to_latest e)
         | Group g -> Group (Group_info.V1.to_latest (Group_info.V1.map g ~f:to_latest))
       ;;
 
       let rec of_latest : Model.t -> t = function
-        | Base b -> Base b
+        | Base b -> Base (Base_info.V2.of_latest b)
         | Exec e -> Exec (Exec_info.V2.of_latest e)
         | Lazy thunk -> of_latest (Base.Lazy.force thunk)
         | Group g -> Group (Group_info.V1.map (Group_info.V1.of_latest g) ~f:of_latest)
@@ -318,12 +410,14 @@ module Stable = struct
         | V1 of V1.t
         | V2 of V2.t
         | V3 of V3.t (* available at least since 2020-04 *)
-      [@@deriving sexp, variants, stable_witness]
+        | V4 of V4.t
+      [@@deriving sexp, variants ~fold, stable_witness]
 
       let to_latest = function
         | V1 t -> V1.to_latest t
         | V2 t -> V2.to_latest t
         | V3 t -> V3.to_latest t
+        | V4 t -> V4.to_latest t
       ;;
 
       let of_latest ~version_to_use latest =
@@ -331,6 +425,7 @@ module Stable = struct
         | 1 -> V1 (V1.of_latest latest)
         | 2 -> V2 (V2.of_latest latest)
         | 3 -> V3 (V3.of_latest latest)
+        | 4 -> V4 (V4.of_latest latest)
         | other ->
           Base.Error.create
             ~here:[%here]
@@ -425,11 +520,20 @@ module Num_occurrences = struct
   ;;
 end
 
+module Help_category = struct
+  type t = Stable.Help_category.Model.t =
+    { abbrev : string
+    ; name : string
+    }
+  [@@deriving compare ~localize, fields ~getters, sexp]
+end
+
 module Flag_info = struct
   type t = Stable.Flag_info.Model.t =
     { name : string
     ; doc : string
     ; aliases : string list
+    ; help_category : Help_category.t option [@sexp.option]
     }
   [@@deriving compare ~localize, fields ~getters, sexp]
 
@@ -463,6 +567,8 @@ module Flag_info = struct
 
   let help_screen_compare a b =
     match a, b with
+    | _, "[-help-category CATEGORY]" -> -1
+    | "[-help-category CATEGORY]", _ -> 1
     | _, "[-help]" -> -1
     | "[-help]", _ -> 1
     | _, "[-version]" -> -1
@@ -740,7 +846,12 @@ module Sexpable = struct
 
   let supported_versions =
     let f i supported _ = Set.add supported i in
-    Versioned.Variants.fold ~init:(Set.empty (module Int)) ~v1:(f 1) ~v2:(f 2) ~v3:(f 3)
+    Versioned.Variants.fold
+      ~init:(Set.empty (module Int))
+      ~v1:(f 1)
+      ~v2:(f 2)
+      ~v3:(f 3)
+      ~v4:(f 4)
   ;;
 
   let of_versioned = Versioned.to_latest

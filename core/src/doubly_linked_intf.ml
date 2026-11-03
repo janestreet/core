@@ -32,7 +32,8 @@ module type S = sig
     val value : 'a t -> 'a
 
     (** pointer equality *)
-    val equal : 'a t -> 'a t -> bool
+    val%template equal : 'a t @ m -> 'a t @ m -> bool
+    [@@mode m = (local, global)]
 
     val set : 'a t -> 'a -> unit
     val sexp_of_t : ('a -> Base.Sexp.t) -> 'a t -> Base.Sexp.t
@@ -58,7 +59,8 @@ module type S = sig
   (** {2 Predicates} *)
 
   (** pointer equality *)
-  val equal : 'a t -> 'a t -> bool
+  val%template equal : 'a t @ m -> 'a t @ m -> bool
+  [@@mode m = (local, global)]
 
   val is_first : 'a t -> 'a Elt.t -> bool
   val is_last : 'a t -> 'a Elt.t -> bool
@@ -161,7 +163,7 @@ module type S = sig
   val mapi_inplace : 'a t -> f:(int -> 'a -> 'a) -> unit
 
   (** [filter_inplace t ~f] removes all elements of [t] that don't satisfy [f]. *)
-  val filter_inplace : 'a t -> f:local_ ('a -> bool) -> unit
+  val filter_inplace : 'a t -> f:('a -> bool) @ local -> unit
 
   val filteri_inplace : 'a t -> f:(int -> 'a -> bool) -> unit
 

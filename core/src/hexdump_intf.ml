@@ -35,7 +35,7 @@ module type S = sig
       :  ?max_lines:int (** default: [!default_max_lines] *)
       -> ?pos:int
       -> ?len:int
-      -> local_ t
+      -> t @ local
       -> string @ l]
 
     (** [to_sequence] produces the lines of [to_string_hum] as a sequence of strings. This
@@ -68,7 +68,12 @@ module type S1 = sig
     [%%template:
     [@@@alloc.default a @ l = (heap_global, stack_local)]
 
-    val to_string_hum : ?max_lines:int -> ?pos:int -> ?len:int -> local_ _ t -> string @ l]
+    val to_string_hum
+      :  ?max_lines:int
+      -> ?pos:int
+      -> ?len:int
+      -> _ t @ local
+      -> string @ l]
 
     val to_sequence : ?max_lines:int -> ?pos:int -> ?len:int -> _ t -> string Sequence.t
 
@@ -91,7 +96,7 @@ module type S2 = sig
       :  ?max_lines:int
       -> ?pos:int
       -> ?len:int
-      -> local_ (_, _) t
+      -> (_, _) t @ local
       -> string @ l]
 
     val to_sequence
@@ -120,7 +125,7 @@ module type S3 = sig
       :  ?max_lines:int
       -> ?pos:int
       -> ?len:int
-      -> local_ (_, _, _) t
+      -> (_, _, _) t @ local
       -> string @ l]
 
     val to_sequence
@@ -141,29 +146,29 @@ end
 module type Indexable = sig
   type t
 
-  val length : local_ t -> int
-  val get : local_ t -> int -> char
+  val length : t @ local -> int
+  val get : t @ local -> int -> char
 end
 
 module type Indexable1 = sig
   type _ t
 
-  val length : local_ _ t -> int
-  val get : local_ _ t -> int -> char
+  val length : _ t @ local -> int
+  val get : _ t @ local -> int -> char
 end
 
 module type Indexable2 = sig
   type (_, _) t
 
-  val length : local_ (_, _) t -> int
-  val get : local_ (_, _) t -> int -> char
+  val length : (_, _) t @ local -> int
+  val get : (_, _) t @ local -> int -> char
 end
 
 module type Indexable3 = sig
   type (_, _, _) t
 
-  val length : local_ (_, _, _) t -> int
-  val get : local_ (_, _, _) t -> int -> char
+  val length : (_, _, _) t @ local -> int
+  val get : (_, _, _) t @ local -> int -> char
 end
 
 module type Hexdump = sig @@ portable

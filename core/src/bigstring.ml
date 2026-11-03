@@ -31,7 +31,7 @@ module Unstable = T
 let create size = create size
 
 external unsafe_array1_sub
-  :  local_ ('a, 'b, 'c) Array1.t
+  :  ('a, 'b, 'c) Array1.t @ local
   -> int
   -> int
   -> ('a, 'b, 'c) Array1.t
@@ -50,13 +50,13 @@ let sub_shared : ?pos:int -> ?len:int -> t -> t = unsafe_sub_shared_of_local
 
 (* Returning local [t] is safe because the reference cannot be held past the lifetime of
    the input. *)
-let sub_shared_local : ?pos:int -> ?len:int -> local_ t -> local_ t =
+let sub_shared_local : ?pos:int -> ?len:int -> t @ local -> t @ local =
   unsafe_sub_shared_of_local
 ;;
 
 (* Destruction *)
 
-external unsafe_destroy : t -> unit @@ portable = "bigstring_destroy_stub"
+external unsafe_destroy : t @ local -> unit @@ portable = "bigstring_destroy_stub"
 external unsafe_destroy_and_resize : t -> len:int -> t @@ portable = "bigstring_realloc"
 
 (* Reading / writing bin-prot *)
@@ -105,7 +105,13 @@ let read_bin_prot t ?pos ?len reader =
   | `Not_enough_data -> Or_error.error_string "not enough data"
 ;;
 
-let write_bin_prot_known_size t ?(pos = 0) write ~size:data_len v =
+let%template[@mode m = (global, local)] write_bin_prot_known_size
+  t
+  ?(pos = 0)
+  (write : (_ Bin_prot.Write.writer[@mode m]))
+  ~size:data_len
+  (v @ m)
+  =
   let total_len = data_len + Bin_prot.Utils.size_header_length in
   if pos < 0 then failwiths "Bigstring.write_bin_prot: negative pos" pos [%sexp_of: int];
   if pos + total_len > length t

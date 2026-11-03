@@ -9,11 +9,11 @@ open Bigarray
 
 (** Type of bigstrings *)
 type t = (char, int8_unsigned_elt, c_layout) Array1.t
-[@@deriving compare ~localize, quickcheck, sexp_of ~stackify]
+[@@deriving compare ~localize, quickcheck, sexp_of ~localize ~stackify]
 
 (** Type of bigstrings which support hashing. Note that mutation invalidates previous
     hashes. *)
-type t_frozen = t [@@deriving compare ~localize, equal ~localize, hash, sexp_of]
+type t_frozen = t [@@deriving compare ~localize, equal ~localize, hash, sexp_of ~localize]
 
 include module type of Base_bigstring with type t := t and type t_frozen := t_frozen
 include Hexdump.S with type t := t
@@ -41,7 +41,7 @@ val sub_shared : ?pos:int -> ?len:int -> t -> t
     The result is allocated on the global heap, even if built with a compiler supporting
     stack allocation. At least as of 2024-08, custom blocks with finalizers cannot be
     allocated on the local heap. *)
-val sub_shared_local : ?pos:int -> ?len:int -> local_ t -> local_ t
+val sub_shared_local : ?pos:int -> ?len:int -> t @ local -> t @ local
 
 (** Like [sub_shared], for local input and global output.
 
@@ -49,7 +49,7 @@ val sub_shared_local : ?pos:int -> ?len:int -> local_ t -> local_ t
     if the input's storage will be destroyed or overwritten after [t]'s local scope ends.
     Only use this function if you know the input's underlying storage is safe to use
     beyond the lifetime of the input [t]. *)
-val unsafe_sub_shared_of_local : ?pos:int -> ?len:int -> local_ t -> t
+val unsafe_sub_shared_of_local : ?pos:int -> ?len:int -> t @ local -> t
 
 (** {2 Reading/writing bin-prot} *)
 
@@ -70,13 +70,14 @@ val write_bin_prot
 (** Same as [write_bin_prot], with the difference that [size] is pre-computed by the
     caller. [size] is assumed to be the result of calling the bin prot sizer on the value
     being written. *)
-val write_bin_prot_known_size
+val%template write_bin_prot_known_size
   :  t
   -> ?pos:int (** default is 0 *)
-  -> 'a Bin_prot.Write.writer
+  -> ('a Bin_prot.Write.writer[@mode m])
   -> size:int
-  -> 'a
+  -> 'a @ m
   -> int
+[@@mode m = (global, local)]
 
 (** The [read_bin_prot*] functions read from the region of [t] starting at [pos] of length
     [len]. They return the index in [t] immediately after the last byte read. They raise
@@ -111,7 +112,7 @@ val read_bin_prot_verbose_errors
       if the bigstring has already been deallocated (or deemed "external", which is
       treated equivalently), or if it has proxies, i.e. other bigstrings referring to the
       same data. *)
-external unsafe_destroy : t -> unit = "bigstring_destroy_stub"
+external unsafe_destroy : t @ local -> unit = "bigstring_destroy_stub"
 
 (** [unsafe_destroy_and_resize bstr ~len] reallocates the memory backing [bstr] and
     returns a new bigstring that starts at position 0 and has length [len]. If [len] is
@@ -131,7 +132,7 @@ external unsafe_destroy_and_resize : t -> len:int -> t = "bigstring_realloc"
     [.pack_tail_padded_fixed_string]. *)
 val get_tail_padded_fixed_string
   :  padding:char
-  -> local_ t
+  -> t @ local
   -> pos:int
   -> len:int
   -> unit
@@ -139,23 +140,23 @@ val get_tail_padded_fixed_string
 
 val get_tail_padded_fixed_string_local
   :  padding:char
-  -> local_ t
+  -> t @ local
   -> pos:int
   -> len:int
   -> unit
-  -> local_ string
+  -> string @ local
 
 val set_tail_padded_fixed_string
   :  padding:char
-  -> local_ t
+  -> t @ local
   -> pos:int
   -> len:int
-  -> local_ string
+  -> string @ local
   -> unit
 
 val get_head_padded_fixed_string
   :  padding:char
-  -> local_ t
+  -> t @ local
   -> pos:int
   -> len:int
   -> unit
@@ -163,26 +164,26 @@ val get_head_padded_fixed_string
 
 val get_head_padded_fixed_string_local
   :  padding:char
-  -> local_ t
+  -> t @ local
   -> pos:int
   -> len:int
   -> unit
-  -> local_ string
+  -> string @ local
 
 val set_head_padded_fixed_string
   :  padding:char
-  -> local_ t
+  -> t @ local
   -> pos:int
   -> len:int
-  -> local_ string
+  -> string @ local
   -> unit
 
 module Unstable : sig
   type nonrec t = t
-  [@@deriving bin_io ~localize, compare ~localize, equal ~localize, sexp_of]
+  [@@deriving bin_io ~localize, compare ~localize, equal ~localize, sexp_of ~localize]
 
   type nonrec t_frozen = t_frozen
-  [@@deriving bin_io ~localize, compare ~localize, hash, sexp_of]
+  [@@deriving bin_io ~localize, compare ~localize, hash, sexp_of ~localize]
 end
 
 module Stable : sig

@@ -62,10 +62,11 @@ module T2 = struct
   let map_both (x, y) ~f1 ~f2 = f1 x, f2 y
   let map2 (x1, y1) (x2, y2) ~f = f x1 x2, f y1 y2
 
-  let compare ~cmp1 ~cmp2 (x, y) (x', y') =
+  let%template compare ~cmp1 ~cmp2 ((x, y) @ m) ((x', y') @ m) =
     match cmp1 x x' with
     | 0 -> cmp2 y y'
     | i -> i
+  [@@mode m = (global, local)]
   ;;
 
   let equal ~eq1 ~eq2 (x, y) (x', y') = eq1 x x' && eq2 y y'
@@ -194,7 +195,8 @@ end
 [@@@mode.default m = (local, global)]
 
 module%template.portable
-  [@modality p] Comparable_plain
+  [@modality p]
+  Comparable_plain
     (S1 : Comparable_plain_arg
   [@mode m] [@modality p])
     (S2 : Comparable_plain_arg
@@ -232,7 +234,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Comparable
+  [@modality p]
+  Comparable
     (S1 : Comparable_arg
   [@mode m])
     (S2 : Comparable_arg
@@ -254,7 +257,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Hashable_plain
+  [@modality p]
+  Hashable_plain
     (S1 : Hashable_plain_arg
   [@mode m])
     (S2 : Hashable_plain_arg
@@ -269,7 +273,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Hasher
+  [@modality p]
+  Hasher
     (H1 : Hashable_arg
   [@mode m])
     (H2 : Hashable_arg
@@ -284,7 +289,8 @@ struct
 end
 
 module%template.portable
-  [@modality p] Hasher_sexpable_of_hashable_sexpable
+  [@modality p]
+  Hasher_sexpable_of_hashable_sexpable
     (S : Hashable_arg
   [@mode m]) : Hashable_arg [@mode m] with type t = S.t = struct
   include S
@@ -293,7 +299,8 @@ module%template.portable
 end
 
 module%template.portable
-  [@modality p] Hashable_t
+  [@modality p]
+  Hashable_t
     (S1 : Hashable_arg
   [@mode m])
     (S2 : Hashable_arg

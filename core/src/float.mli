@@ -36,10 +36,14 @@ module Robust_compare : sig
     end) : S
 end
 
-(** So-called "robust" comparisons, which include a small tolerance, so that float that
-    differ by a small amount are considered equal.
+(** So-called "robust" comparisons use a fixed absolute tolerance of [1e-7], so floats
+    that differ by at most that amount are considered equal. This approximate equality is
+    non-transitive: [0. =. 0.75e-7] and [0.75e-7 =. 1.5e-7], but [0. <>. 1.5e-7].
+    Therefore, [robustly_compare] is not a comparator and must never be passed to sorting
+    or deduplication functions, [Map] or [Set], or [Comparable.Make]. Use [Float.compare]
+    for ordering and these robust operators only for pairwise threshold checks.
 
-    Note that the results of robust comparisons on [nan] should be considered undefined. *)
+    The results of robust comparisons on [nan] should be considered undefined. *)
 include Robust_compare.S
 
 module O : sig

@@ -7,7 +7,8 @@ module%template Of_stable_format : sig
   [@@@mode.default m = (global, local)]
 
   module%template.portable
-    [@modality p] V1
+    [@modality p]
+    V1
       (Stable_format : sig
          type t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -19,7 +20,8 @@ module%template Of_stable_format : sig
        end) : S0 [@mode m] [@modality p] with type t = M.t
 
   module%template.portable
-    [@modality p] V2
+    [@modality p]
+    V2
       (Stable_format : sig
          type t [@@deriving (bin_io [@mode m]), sexp]
        end)
@@ -156,7 +158,8 @@ module With_stable_witness : sig
     [@@@mode.default m = (global, local)]
 
     module%template.portable
-      [@modality p] V1
+      [@modality p]
+      V1
         (Stable_format : sig
            type t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)
@@ -168,7 +171,8 @@ module With_stable_witness : sig
          end) : With_stable_witness.S0 [@mode m] [@modality p] with type t = M.t
 
     module%template.portable
-      [@modality p] V2
+      [@modality p]
+      V2
         (Stable_format : sig
            type t [@@deriving (bin_io [@mode m]), sexp, stable_witness]
          end)

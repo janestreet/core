@@ -29,8 +29,8 @@ module Ofday : sig
   val arg_type : t Command.Arg_type.t
 
   module Zoned : sig
-    (** [t_of_sexp] accepts short forms like "(12:01 nyc)". [sexp_of_t] produces the full
-        ofday and zone name, e.g., "(12:01:00.000000 America/New_York)".
+    (** [t_of_sexp] accepts short forms like "(12:01 America/New_York)". [sexp_of_t]
+        produces the full ofday and zone name, e.g., "(12:01:00.000000 America/New_York)".
 
         Two [t]'s may or may not correspond to the same times depending on which date
         they're evaluated. *)
@@ -39,8 +39,8 @@ module Ofday : sig
 
     include Pretty_printer.S with type t := t
 
-    (** [of_string] accepts short forms like "12:01 nyc". [to_string] produces the full
-        ofday and zone name, e.g., "12:01:00.000000 America/New_York". *)
+    (** [of_string] accepts short forms like "12:01 America/New_York". [to_string]
+        produces the full ofday and zone name, e.g., "12:01:00.000000 America/New_York". *)
     include Stringable with type t := t
 
     (** Like [to_string] but uses [Time_float.Ofday.to_string_trimmed] to format the ofday *)

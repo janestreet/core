@@ -28,6 +28,17 @@ module Caseless : sig
     Comparable.S_binable [@mode local] [@modality portable] with type t := t
 
   include Hashable.S_binable with type t := t
+
+  module Stable : sig
+    module V1 : sig
+      type nonrec t = t [@@deriving bin_io ~localize]
+
+      include
+        Stable_string.Identifiable_without_binio
+        with type t := t
+         and type comparator_witness = comparator_witness
+    end
+  end
 end
 
 (** [slice t start stop] returns a new string including elements [t.(start)] through
@@ -43,11 +54,11 @@ val nget : t -> int -> char
 
 (** [take_while s ~f] returns the longest prefix of [s] satisfying [for_all prefix ~f]
     (See [lstrip] to drop such a prefix) *)
-val take_while : t @ m -> f:local_ (char -> bool) -> t @ m
+val take_while : t @ m -> f:(char -> bool) @ local -> t @ m
 
 (** [rtake_while s ~f] returns the longest suffix of [s] satisfying [for_all suffix ~f]
     (See [rstrip] to drop such a suffix) *)
-val rtake_while : t @ m -> f:local_ (char -> bool) -> t @ m]
+val rtake_while : t @ m -> f:(char -> bool) @ local -> t @ m]
 
 include Hexdump.S with type t := t
 

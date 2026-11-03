@@ -47,10 +47,10 @@ include module type of struct
    and module Step := Base.Sequence.Step
    and module Merge_with_duplicates_element := Base.Sequence.Merge_with_duplicates_element
 
-module type Heap = sig
+module type%template [@mode p = (portable, nonportable)] Heap = sig
   type 'a t
 
-  val create : compare:('a -> 'a -> int) -> 'a t
+  val create : compare:('a -> 'a -> int) @ p -> 'a t
   val add : 'a t -> 'a -> 'a t
   val pop_min : 'a t -> ('a * 'a t) option
 end
@@ -61,4 +61,9 @@ end
 
     This includes duplicate elements in the output (whether they occur within one input
     sequence, or across different input sequences). *)
-val merge_all : (module Heap) -> 'a t list -> compare:('a -> 'a -> int) -> 'a t
+val%template merge_all
+  :  ((module Heap)[@mode p])
+  -> 'a t list
+  -> compare:('a -> 'a -> int) @ p
+  -> 'a t
+[@@mode p = (portable, nonportable)]

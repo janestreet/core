@@ -4,11 +4,26 @@ open! Import
 
 type ('a : any mod separable) t = 'a Base.Iarray.t
 
-[%%rederive:
-  type 'a t = 'a Base.Iarray.t
-  [@@deriving bin_io ~localize, quickcheck ~portable, typerep]]
+[%%template:
+type ('a : k mod separable) t = ('a Base.Iarray.t[@kind k])
+[@@kind k = (base_non_value, value_or_null mod external64)]
 
-include Base.Iarray.Public with type ('a : any mod separable) t := 'a t (** @inline *)
+[@@@kind k = (base_or_null, value_or_null mod external64)]
+
+[%%rederive:
+  type nonrec ('a : k mod separable) t = ('a t[@kind k])
+  [@@deriving bin_io ~localize] [@@kind k]]]
+
+[%%rederive: type 'a t = 'a Base.Iarray.t [@@deriving quickcheck ~portable, typerep]]
+
+include%template
+  Base.Iarray.Public
+[@with:
+  type ('a : any mod separable) t := 'a t
+
+  type ('a : k mod separable) t := ('a t[@kind k])
+  [@@kind k = (base_non_value, value_or_null mod external64)]]
+(** @inline *)
 
 module Stable : sig
   module V1 : sig

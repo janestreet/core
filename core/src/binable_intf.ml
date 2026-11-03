@@ -81,11 +81,14 @@ module type Conv_sexpable = sig
   val caller_identity : Bin_prot.Shape.Uuid.t
 end
 
-module type Conv_stringable = sig
-  include Stringable.S
+[%%template
+[@@@alloc a @ m = (heap_global, stack_local)]
+
+module type [@mode m] Conv_stringable = sig
+  include Stringable.S [@alloc a]
 
   val caller_identity : Bin_prot.Shape.Uuid.t
-end
+end]
 
 (** Module types and utilities for dealing with types that support the bin-io binary
     encoding. *)
@@ -122,8 +125,8 @@ module type Binable0 = sig @@ portable
   module type S_only_functions = S_only_functions [@mode m]
 
   module type%template
-    [@kind.explicit_plus_unmangled k = (value, value_or_null)] [@mode m] S1 = S1
-  [@mode m] [@kind.explicit k]
+    [@kind.explicit_plus_unmangled k = (value, value_or_null)] [@mode m]
+    S1 = S1 [@mode m] [@kind.explicit k]
 
   module type S2 = S2 [@mode m]
   module type S3 = S3 [@mode m]
@@ -211,7 +214,9 @@ module type Binable0 = sig @@ portable
   [@@alert legacy "Use [Of_binable3_with_uuid] if possible."]]
 
   module type Conv_sexpable = Conv_sexpable
-  module type Conv_stringable = Conv_stringable
+
+  module type%template [@mode m = (global, local)] Conv_stringable = Conv_stringable
+  [@mode m]
 
   (** [Of_sexpable_with_uuid] serializes a value using the bin-io of the sexp
       serialization of the value. This is not as efficient as using [@@deriving bin_io].
@@ -224,8 +229,11 @@ module type Binable0 = sig @@ portable
   module%template.portable Of_sexpable_with_uuid (M : Conv_sexpable) :
     S with type t := M.t
 
-  module%template.portable Of_stringable_with_uuid (M : Conv_stringable) :
-    S with type t := M.t
+  module%template.portable
+    [@mode m = (global, local)]
+    Of_stringable_with_uuid
+      (M : Conv_stringable
+    [@mode m]) : S [@mode m] with type t := M.t
 
   module%template.portable Of_sexpable_without_uuid (M : sig
       type t : value_or_null
@@ -234,9 +242,15 @@ module type Binable0 = sig @@ portable
     end) : S with type t := M.t
   [@@alert legacy "Use [Of_sexpable_with_uuid] if possible."]
 
-  module%template.portable Of_stringable_without_uuid (M : Stringable.S) :
-    S with type t := M.t
-  [@@alert legacy "Use [Of_stringable_with_uuid] if possible."]
+  [%%template:
+  [@@@alloc a @ m = (heap_global, stack_local)]
+
+  module%template.portable
+    [@mode m]
+    Of_stringable_without_uuid
+      (M : Stringable.S
+    [@alloc a]) : S [@mode m] with type t := M.t
+  [@@alert legacy "Use [Of_stringable_with_uuid] if possible."]]
 
   [%%template:
   [@@@mode.default m = (global, local)]
@@ -251,6 +265,9 @@ module type Binable0 = sig @@ portable
     -> ('a m[@mode m])
     -> 'a @ m
     -> bigstring]
+
+  val m_of_type_class : ('a : any). 'a Bin_prot.Type_class.t -> 'a m
+  val m_to_type_class : ('a : any). 'a m -> 'a Bin_prot.Type_class.t
 
   (** The following functors preserve stability: if applied to stable types with stable
       (de)serializations, they will produce stable types with stable (de)serializations.
@@ -317,11 +334,13 @@ module type Binable0 = sig @@ portable
     module Of_stringable : sig
       [@@@modality.default p = (portable, nonportable)]
 
-      module V1 : (module type of Of_stringable_without_uuid [@modality p])
+      module [@mode m = (global, local)] V1 :
+          (module type of Of_stringable_without_uuid [@mode m] [@modality p])
       [@alert "-legacy"]
       [@@alert legacy "Use [V2] instead."]
 
-      module V2 : module type of Of_stringable_with_uuid [@modality p]
+      module [@mode m = (global, local)] V2 :
+          module type of Of_stringable_with_uuid [@mode m] [@modality p]
     end
   end
 end

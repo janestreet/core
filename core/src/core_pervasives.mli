@@ -137,17 +137,9 @@ external __MODULE__ : string = "%loc_MODULE"
     in the line and [enum] the last character position in the line. *)
 external __POS__ : string * int * int * int = "%loc_POS"
 
-[%%if ocaml_version >= (4, 12, 0)]
-
 (** [__FUNCTION__] returns the name of the current function or method, including any
     enclosing modules or classes. *)
 external __FUNCTION__ : string = "%loc_FUNCTION"
-
-[%%else]
-
-val __FUNCTION__ : string
-
-[%%endif]
 
 (** [__LOC_OF__ expr] returns a pair [(loc, expr)] where [loc] is the location of [expr]
     in the file currently being parsed by the compiler, with the standard error format of
