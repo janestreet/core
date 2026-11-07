@@ -106,14 +106,13 @@ let create
 
 let to_parts t =
   let open Int63 in
-  let mag = abs t in
   { Parts.sign = (if t < zero then Neg else if t > zero then Pos else Zero)
-  ; hr = to_int_exn (mag / hour)
-  ; min = to_int_exn (rem mag hour / minute)
-  ; sec = to_int_exn (rem mag minute / second)
-  ; ms = to_int_exn (rem mag second / millisecond)
-  ; us = to_int_exn (rem mag millisecond / microsecond)
-  ; ns = to_int_exn (rem mag microsecond / nanosecond)
+  ; hr = to_int_exn (abs (t / hour))
+  ; min = to_int_exn (abs (rem t hour / minute))
+  ; sec = to_int_exn (abs (rem t minute / second))
+  ; ms = to_int_exn (abs (rem t second / millisecond))
+  ; us = to_int_exn (abs (rem t millisecond / microsecond))
+  ; ns = to_int_exn (abs (rem t microsecond / nanosecond))
   }
 ;;
 
@@ -200,18 +199,18 @@ let of_unit_of_time u =
 ;;
 
 let to_unit_of_time t : Unit_of_time.t =
-  let abs_t = abs t in
-  if abs_t >= day
+  let neg_abs_t = if t > zero then neg t else t in
+  if neg_abs_t <= neg day
   then Day
-  else if abs_t >= hour
+  else if neg_abs_t <= neg hour
   then Hour
-  else if abs_t >= minute
+  else if neg_abs_t <= neg minute
   then Minute
-  else if abs_t >= second
+  else if neg_abs_t <= neg second
   then Second
-  else if abs_t >= millisecond
+  else if neg_abs_t <= neg millisecond
   then Millisecond
-  else if abs_t >= microsecond
+  else if neg_abs_t <= neg microsecond
   then Microsecond
   else Nanosecond
 ;;
