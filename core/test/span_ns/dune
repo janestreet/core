@@ -1,0 +1,3 @@
+(test
+ (name regression_min)
+ (libraries core))
