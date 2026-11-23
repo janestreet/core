@@ -172,22 +172,19 @@ let prev_multiple ?(can_equal_before = false) ~base ~before ~interval () =
     ~interval
 ;;
 
+(* [round_up] and [round_down] do not go through [next_multiple_internal], because that
+   only considers multiples at or after [base] ([k >= 0]), so with [~base:epoch] times
+   before the epoch would round to [epoch]. *)
 let round_up t ~interval ~calling_function_name =
-  next_multiple_internal
-    ~calling_function_name
-    ~can_equal_after:true
-    ~base:epoch
-    ~after:t
-    ~interval
+  if Span.( <= ) interval Span.zero
+  then raise_next_multiple_got_nonpositive_interval ~calling_function_name interval;
+  of_span_since_epoch (Span.round_up (to_span_since_epoch t) ~to_multiple_of:interval)
 ;;
 
 let round_down t ~interval ~calling_function_name =
-  prev_multiple_internal
-    ~calling_function_name
-    ~can_equal_before:true
-    ~base:epoch
-    ~before:t
-    ~interval
+  if Span.( <= ) interval Span.zero
+  then raise_next_multiple_got_nonpositive_interval ~calling_function_name interval;
+  of_span_since_epoch (Span.round_down (to_span_since_epoch t) ~to_multiple_of:interval)
 ;;
 
 let round_up_to t ~interval = round_up t ~interval ~calling_function_name:"round_up_to"
