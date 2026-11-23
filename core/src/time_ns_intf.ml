@@ -642,8 +642,9 @@ module type Time_ns = sig
       Time zone offsets (in the tzdata time zone database, at least) are expressed in
       seconds, so rounding to units of seconds or smaller is not affected by time zones.
       The [round*] functions below provide some straightforward cases. For other small
-      units that evenly divide into a second, call with [base = epoch], [after] as the
-      time to round, and [interval] as the unit span you are rounding to. *)
+      units that evenly divide into a second, use [round_up_to] or [round_down_to] with
+      [interval] as the unit span you are rounding to. Calling this function with
+      [base = epoch] does not round times before the epoch, because [k >= 0]. *)
   val next_multiple
     :  ?can_equal_after:bool (** default is [false] *)
     -> base:t
@@ -672,8 +673,9 @@ module type Time_ns = sig
       Time zone offsets (in the tzdata time zone database, at least) are expressed in
       seconds, so rounding to units of seconds or smaller is not affected by time zones.
       The [round*] functions below provide some straightforward cases. For other small
-      units that evenly divide into a second, call with [base = epoch], [after] as the
-      time to round, and [interval] as the unit span you are rounding to. *)
+      units that evenly divide into a second, use [round_up_to] or [round_down_to] with
+      [interval] as the unit span you are rounding to. Calling this function with
+      [base = epoch] does not round times before the epoch, because [k >= 0]. *)
   val prev_multiple
     :  ?can_equal_before:bool (** default is [false] *)
     -> base:t

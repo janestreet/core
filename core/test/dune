@@ -1,0 +1,6 @@
+(library
+ (name core_test)
+ (libraries core)
+ (inline_tests)
+ (preprocess
+  (pps ppx_jane -compare-require-explicit-locality)))
